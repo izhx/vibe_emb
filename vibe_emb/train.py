@@ -1,0 +1,240 @@
+from __future__ import annotations
+
+import argparse
+import logging
+import os
+import sys
+from pathlib import Path
+from typing import Any, Dict
+
+import transformers
+import yaml
+import torch.distributed as dist
+from transformers import AutoTokenizer, TrainingArguments, set_seed
+from transformers.trainer_callback import TrainerCallback
+from transformers.trainer_utils import get_last_checkpoint
+
+from .collator import EmbeddingCollator
+from .config import load_yaml_config, parse_sections, to_plain_dict
+from .data import MultiDatasetBatchDataset
+from .modeling import EmbeddingModel, build_base_model, maybe_apply_peft
+from .trainer import EmbeddingTrainer
+
+logger = logging.getLogger(__name__)
+
+
+class _ReadableYamlDumper(yaml.SafeDumper):
+    pass
+
+
+def _str_presenter(dumper: yaml.SafeDumper, data: str):
+    if "\n" in data:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
+
+_ReadableYamlDumper.add_representer(str, _str_presenter)
+
+
+class DatasetRefreshCallback(TrainerCallback):
+    def __init__(self, dataset: MultiDatasetBatchDataset) -> None:
+        self.dataset = dataset
+
+    def on_epoch_begin(self, args, state, control, **kwargs):  # noqa: ANN001
+        self.dataset.refresh_epoch(int(state.epoch or 0))
+        return control
+
+
+class DatasetStatsCallback(TrainerCallback):
+    def __init__(self, dataset: MultiDatasetBatchDataset) -> None:
+        self.dataset = dataset
+
+    def on_log(self, args, state, control, **kwargs):  # noqa: ANN001
+        # Follow Trainer logging cadence instead of adding another interval.
+        # This keeps dataset consumption stats aligned with loss/lr logs.
+        if args.process_index == 0:
+            self.dataset.log_consumption_stats("consumed")
+        return control
+
+
+def _setup_logging(output_dir: str, process_index: int) -> None:
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
+    if process_index == 0:
+        handlers.append(logging.FileHandler(os.path.join(output_dir, "train.log"), mode="a", encoding="utf-8"))
+    logging.basicConfig(
+        format="%(asctime)s|%(name)s:%(lineno)d|%(levelname)s - %(message)s",
+        datefmt="%Y/%m/%d %H:%M:%S",
+        level=logging.INFO if process_index == 0 else logging.WARNING,
+        handlers=handlers,
+        force=True,
+    )
+
+
+def _apply_cli_overrides(raw: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any]:
+    raw = dict(raw)
+    raw.setdefault("model", {})
+    raw.setdefault("training", {})
+    if args.output_dir:
+        raw["training"]["output_dir"] = args.output_dir
+    if args.model_name_or_path:
+        raw["model"]["model_name_or_path"] = args.model_name_or_path
+    if args.max_steps is not None:
+        raw["training"]["max_steps"] = args.max_steps
+    if args.resume_from_checkpoint:
+        raw["training"]["resume_from_checkpoint"] = args.resume_from_checkpoint
+    if args.overwrite_output_dir:
+        raw["training"]["overwrite_output_dir"] = True
+    return raw
+
+
+def _save_yaml(path: str, data: Dict[str, Any]) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.dump(data, f, Dumper=_ReadableYamlDumper, allow_unicode=True, sort_keys=False)
+
+
+def _build_training_args(training_raw: Dict[str, Any]) -> TrainingArguments:
+    training_raw = dict(training_raw)
+    overwrite_output_dir = bool(training_raw.pop("overwrite_output_dir", False))
+    training_raw.setdefault("output_dir", "results/vibe-embedder")
+    training_raw.setdefault("do_train", True)
+    training_raw.setdefault("per_device_train_batch_size", 1)
+    training_raw.setdefault("gradient_accumulation_steps", 1)
+    training_raw.setdefault("dataloader_num_workers", 0)
+    training_raw.setdefault("remove_unused_columns", False)
+    training_raw.setdefault("report_to", "none")
+    if training_raw["gradient_accumulation_steps"] != 1:
+        raise ValueError("gradient_accumulation_steps must be 1 for contrastive embedding training.")
+    if training_raw["per_device_train_batch_size"] != 1:
+        raise ValueError("per_device_train_batch_size must be 1 because dataset items are pre-batched.")
+    if training_raw["dataloader_num_workers"] != 0:
+        raise ValueError(
+            "dataloader_num_workers must be 0. Dataset consumption stats are updated in __getitem__, "
+            "and worker-process dataset copies would make Trainer logs misleading."
+        )
+    args = TrainingArguments(**training_raw)
+    setattr(args, "vibe_overwrite_output_dir", overwrite_output_dir)
+    return args
+
+
+class EmbeddingTrainRunner:
+    def __init__(self, config_path: str, cli_args: argparse.Namespace) -> None:
+        raw = _apply_cli_overrides(load_yaml_config(config_path), cli_args)
+        self.raw_config = raw
+        self.model_args, self.data_args, training_raw, self.training_extras = parse_sections(raw)
+        self.training_args = _build_training_args(training_raw)
+        _setup_logging(self.training_args.output_dir, self.training_args.process_index)
+        transformers.utils.logging.set_verbosity(self.training_args.get_process_log_level())
+
+        if self.training_args.process_index == 0:
+            _save_yaml(os.path.join(self.training_args.output_dir, "training_config.yaml"), raw)
+            _save_yaml(
+                os.path.join(self.training_args.output_dir, "resolved_config.yaml"),
+                {
+                    "model": to_plain_dict(self.model_args),
+                    "data": to_plain_dict(self.data_args),
+                    "training": training_raw,
+                    "training_extras": to_plain_dict(self.training_extras),
+                },
+            )
+
+        logger.warning(
+            "Process rank: %s, world size: %s, local rank: %s, device: %s, n_gpu: %s, distributed: %s, bf16: %s, fp16: %s",
+            self.training_args.process_index,
+            self.training_args.world_size,
+            self.training_args.local_rank,
+            self.training_args.device,
+            self.training_args.n_gpu,
+            self.training_args.world_size > 1,
+            self.training_args.bf16,
+            self.training_args.fp16,
+        )
+        logger.info("Training parameters: %s", self.training_args)
+
+        set_seed(self.training_args.seed)
+        self.tokenizer = self._load_tokenizer()
+        self.model = self._load_model()
+        self.train_dataset = self._load_train_dataset()
+        self.collator = EmbeddingCollator(self.tokenizer, pad_to_multiple_of=self.data_args.pad_to_multiple_of)
+        self.trainer = self._load_trainer()
+
+    def _load_tokenizer(self):
+        tokenizer = AutoTokenizer.from_pretrained(
+            self.model_args.model_name_or_path,
+            cache_dir=self.model_args.cache_dir,
+            trust_remote_code=self.model_args.trust_remote_code,
+            use_fast=self.model_args.use_fast_tokenizer,
+        )
+        if tokenizer.pad_token is None:
+            if tokenizer.eos_token is None:
+                raise ValueError("Tokenizer has neither pad_token nor eos_token; please configure a pad token.")
+            tokenizer.pad_token = tokenizer.eos_token
+            logger.info("Tokenizer pad_token was missing; using eos_token as pad_token.")
+        return tokenizer
+
+    def _load_model(self):
+        base_model = build_base_model(self.model_args, bf16=self.training_args.bf16, fp16=self.training_args.fp16)
+        base_model = maybe_apply_peft(base_model, self.model_args)
+        model = EmbeddingModel(base_model, self.model_args, self.training_extras)
+        if self.training_args.gradient_checkpointing and self.model_args.gradient_checkpointing_enable_input_grads:
+            model.enable_input_require_grads()
+        return model
+
+    def _load_train_dataset(self):
+        return MultiDatasetBatchDataset(
+            self.data_args,
+            self.training_extras,
+            seed=self.training_args.seed,
+            process_index=self.training_args.process_index,
+            world_size=self.training_args.world_size,
+        )
+
+    def _load_trainer(self):
+        trainer = EmbeddingTrainer(
+            model=self.model,
+            args=self.training_args,
+            train_dataset=self.train_dataset,
+            data_collator=self.collator,
+            processing_class=self.tokenizer,
+        )
+        trainer.add_callback(DatasetRefreshCallback(self.train_dataset))
+        trainer.add_callback(DatasetStatsCallback(self.train_dataset))
+        return trainer
+
+    def run(self) -> None:
+        last_checkpoint = None
+        if (
+            os.path.isdir(self.training_args.output_dir)
+            and self.training_args.do_train
+            and not getattr(self.training_args, "vibe_overwrite_output_dir", False)
+        ):
+            last_checkpoint = get_last_checkpoint(self.training_args.output_dir)
+            if last_checkpoint is not None and self.training_args.resume_from_checkpoint is None:
+                logger.info("Checkpoint detected; resuming from %s", last_checkpoint)
+
+        checkpoint = self.training_args.resume_from_checkpoint or last_checkpoint
+        train_result = self.trainer.train(resume_from_checkpoint=checkpoint)
+        self.trainer.save_model()
+        metrics = train_result.metrics
+        metrics["train_batches"] = len(self.train_dataset)
+        self.trainer.log_metrics("train", metrics)
+        self.trainer.save_metrics("train", metrics)
+        self.trainer.save_state()
+        if dist.is_available() and dist.is_initialized():
+            dist.destroy_process_group()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--output_dir")
+    parser.add_argument("--model_name_or_path")
+    parser.add_argument("--max_steps", type=int)
+    parser.add_argument("--resume_from_checkpoint")
+    parser.add_argument("--overwrite_output_dir", action="store_true")
+    args = parser.parse_args()
+    EmbeddingTrainRunner(args.config, args).run()
+
+
+if __name__ == "__main__":
+    main()

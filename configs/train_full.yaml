@@ -1,0 +1,82 @@
+model:
+  model_name_or_path: data/raw/Qwen2.5-0.5B
+  trust_remote_code: true
+  pooling: last_token
+  normalize_embeddings: true
+  peft_config:
+    type: LoraConfig
+    params:
+      r: 32
+      lora_alpha: 64
+      lora_dropout: 0.0
+      target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, down_proj, up_proj]
+      bias: none
+  save_merged_lora_model: false
+
+data:
+  default_query_max_len: 320
+  default_passage_max_len: 512
+  default_train_group_size: 4
+  # This is the per-rank contrastive batch size. Trainer batch_size stays 1
+  # because each dataset item is already a complete rank-local batch.
+  default_batch_size: 64
+  default_query_instruction: "Given a query, retrieve passages that are relevant to the query."
+  default_query_instruction_format: "Instruct: {}\nQuery: {}"
+  default_passage_instruction_format: "{}{}"
+  pad_to_multiple_of: 8
+  same_dataset_within_batch: true
+  datasets:
+    - name: toolret
+      path: data/train/toolret-train/toolret.jsonl
+      sample_size: 100000
+    - name: msmarco_w_instructions
+      path: data/train/msmarco-w-instructions/msmarco-w-instructions.jsonl
+      sample_size: 100000
+    - name: codesearchnet
+      path: data/train/codesearchnet/codesearchnet.jsonl
+      sample_size: 100000
+    - name: fever
+      path: data/train/embeddings-fine-tuning/fever.jsonl
+      sample_size: 100000
+    - name: fiqa
+      path: data/train/embeddings-fine-tuning/fiqa.jsonl
+      sample_size: 100000
+    - name: hotpotqa
+      path: data/train/embeddings-fine-tuning/hotpotqa.jsonl
+      sample_size: 100000
+    - name: msmarco
+      path: data/train/embeddings-fine-tuning/msmarco.jsonl
+      sample_size: 100000
+    - name: nq
+      path: data/train/embeddings-fine-tuning/nq.jsonl
+      sample_size: 100000
+    - name: squadv2
+      path: data/train/embeddings-fine-tuning/squadv2.jsonl
+      sample_size: 100000
+    - name: trivia
+      path: data/train/embeddings-fine-tuning/trivia.jsonl
+      sample_size: 100000
+
+training:
+  output_dir: results/vibe-embedder-full
+  overwrite_output_dir: true
+  do_train: true
+  num_train_epochs: 1
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 1
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.1
+  optim: adamw_torch
+  bf16: true
+  gradient_checkpointing: true
+  logging_steps: 1
+  save_steps: 1000
+  save_strategy: steps
+  dataloader_drop_last: true
+  dataloader_num_workers: 0
+  ddp_find_unused_parameters: false
+  remove_unused_columns: false
+  report_to: none
+  temperature: 0.02
+  negatives_cross_device: true
+  sub_batch_size: 0
