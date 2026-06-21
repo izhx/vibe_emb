@@ -1,0 +1,14 @@
+.vscode/
+.codex/
+
+
+.cache/
+cache/
+__pycache__/
+*.log
+
+/data/raw
+/data/struct-ir
+/data/*/*/*.json*
+/ref_repo/
+/results/
