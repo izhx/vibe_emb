@@ -70,17 +70,22 @@ DEFAULT_TASKS = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Evaluate a local FlagEmbedding decoder-only LoRA checkpoint with MTEB."
+        description="Evaluate a local decoder-only embedding model checkpoint with MTEB."
     )
     parser.add_argument(
-        "--base_model",
-        default="data/raw/Qwen2.5-0.5B",
-        help="Base HF model path used for training.",
-    )
-    parser.add_argument(
+        "--model_name_or_path",
         "--checkpoint",
-        default="results/qwen2_5-0b5-embedder-multitask/checkpoint-2000",
-        help="PEFT checkpoint directory.",
+        dest="model_name_or_path",
+        default="data/raw/Qwen2.5-0.5B",
+        help=(
+            "Full Hugging Face model checkpoint/directory to evaluate, or the base model "
+            "when --adapter is set. --checkpoint is kept as a backwards-compatible alias."
+        ),
+    )
+    parser.add_argument(
+        "--adapter",
+        default=None,
+        help="Optional PEFT adapter checkpoint to load and merge onto --model_name_or_path.",
     )
     parser.add_argument("--tasks", nargs="+", default=DEFAULT_TASKS)
     parser.add_argument("--eval_splits", nargs="+", default=None)
@@ -133,6 +138,7 @@ def build_tasks(task_names: list[str]):
 
 def main() -> None:
     args = parse_args()
+
     root = ROOT
     os.chdir(root)
 
@@ -147,8 +153,8 @@ def main() -> None:
     from vibe_eval.modeling import QwenDecoderOnlyEmbedder
 
     model = QwenDecoderOnlyEmbedder(
-        base_model=args.base_model,
-        checkpoint=args.checkpoint,
+        model_name_or_path=args.model_name_or_path,
+        adapter_name_or_path=args.adapter,
         device=args.device,
         dtype=args.dtype,
         batch_size=args.batch_size,

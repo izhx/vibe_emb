@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -11,7 +10,6 @@ import torch.nn.functional as F
 from mteb.models.model_meta import ModelMeta
 from mteb.models.model_meta import ScoringFunction
 from mteb.types import PromptType
-from peft import PeftModel
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import AutoModel, AutoTokenizer
@@ -24,13 +22,14 @@ DEFAULT_QUERY_INSTRUCTION_FORMAT = "Instruct: {}\nQuery: {}"
 
 
 class QwenDecoderOnlyEmbedder:
-    """MTEB encoder wrapper for FlagEmbedding decoder-only LoRA checkpoints."""
+    """MTEB encoder wrapper for decoder-only embedding checkpoints."""
 
     def __init__(
         self,
-        base_model: str,
-        checkpoint: str,
+        checkpoint: str | None = None,
         *,
+        model_name_or_path: str | None = None,
+        adapter_name_or_path: str | None = None,
         device: str | None = None,
         dtype: str = "auto",
         batch_size: int = 32,
@@ -44,8 +43,14 @@ class QwenDecoderOnlyEmbedder:
         trust_remote_code: bool = False,
         use_flash_attn: bool = False,
     ) -> None:
-        self.base_model = base_model
-        self.checkpoint = checkpoint
+        model_path, adapter_path = self._resolve_model_paths(
+            checkpoint=checkpoint,
+            model_name_or_path=model_name_or_path,
+            adapter_name_or_path=adapter_name_or_path,
+        )
+        self.checkpoint = checkpoint or model_path
+        self.model_name_or_path = model_path
+        self.adapter_name_or_path = adapter_path
         self.batch_size = batch_size
         self.max_length = max_length
         self.query_max_length = query_max_length or max_length
@@ -58,8 +63,11 @@ class QwenDecoderOnlyEmbedder:
             device or ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            checkpoint,
+        tokenizer_sources = (
+            [adapter_path, model_path] if adapter_path is not None else [model_path]
+        )
+        self.tokenizer = self._load_tokenizer(
+            tokenizer_sources,
             trust_remote_code=trust_remote_code,
         )
         if self.tokenizer.pad_token is None:
@@ -75,16 +83,17 @@ class QwenDecoderOnlyEmbedder:
         if use_flash_attn:
             model_kwargs["attn_implementation"] = "flash_attention_2"
 
-        base = AutoModel.from_pretrained(base_model, **model_kwargs)
+        base = AutoModel.from_pretrained(model_path, **model_kwargs)
         if base.get_input_embeddings().weight.shape[0] != len(self.tokenizer):
             base.resize_token_embeddings(len(self.tokenizer))
-        self.model = PeftModel.from_pretrained(base, checkpoint)
+        self.model = self._maybe_load_adapter(base, adapter_path)
         self.model.to(self.device)
         self.model.eval()
 
+        display_path = adapter_path or model_path
         self.mteb_model_meta = ModelMeta(
             loader=None,
-            name='/'.join(Path(checkpoint).parts[-2:]),
+            name=self._display_name(display_path),
             revision=None,
             release_date=None,
             languages=["eng-Latn"],
@@ -101,6 +110,100 @@ class QwenDecoderOnlyEmbedder:
             use_instructions=True,
             training_datasets=None,
         )
+
+    @classmethod
+    def _resolve_model_paths(
+        cls,
+        *,
+        checkpoint: str | None,
+        model_name_or_path: str | None,
+        adapter_name_or_path: str | None,
+    ) -> tuple[str, str | None]:
+        model_path = model_name_or_path or checkpoint
+        if adapter_name_or_path is not None:
+            if not model_path:
+                raise ValueError(
+                    "model_name_or_path is required when adapter_name_or_path is set."
+                )
+            cls._validate_full_model_path(model_path)
+            return model_path, adapter_name_or_path
+
+        if model_path is not None:
+            cls._validate_full_model_path(model_path)
+            return model_path, None
+
+        raise ValueError("model_name_or_path or checkpoint is required.")
+
+    @staticmethod
+    def _looks_like_adapter_path(path: str) -> bool:
+        path_obj = Path(path)
+        return (
+            path_obj.is_dir()
+            and (path_obj / "adapter_config.json").is_file()
+            and not (path_obj / "config.json").is_file()
+        )
+
+    @classmethod
+    def _validate_full_model_path(cls, path: str) -> None:
+        path_obj = Path(path)
+        if not path_obj.is_dir():
+            return
+        if cls._looks_like_adapter_path(path):
+            raise ValueError(
+                f"{path} looks like a PEFT adapter-only checkpoint. "
+                "Evaluate a full model directory, or pass it as adapter_name_or_path "
+                "with model_name_or_path set to the base model."
+            )
+
+    @staticmethod
+    def _load_tokenizer(
+        sources: Iterable[str | None],
+        *,
+        trust_remote_code: bool,
+    ):
+        errors: list[Exception] = []
+        tried: list[str] = []
+        for source in sources:
+            if source is None:
+                continue
+            tried.append(source)
+            try:
+                return AutoTokenizer.from_pretrained(
+                    source,
+                    trust_remote_code=trust_remote_code,
+                )
+            except Exception as exc:  # pragma: no cover - depends on local checkpoint contents
+                errors.append(exc)
+        message = f"Failed to load tokenizer from any of: {', '.join(tried)}"
+        if errors:
+            raise RuntimeError(message) from errors[-1]
+        raise RuntimeError(message)
+
+    @staticmethod
+    def _maybe_load_adapter(model: Any, adapter_name_or_path: str | None):
+        if adapter_name_or_path is None:
+            return model
+        try:
+            from peft import PeftModel
+        except Exception as exc:  # pragma: no cover - depends on optional env
+            raise RuntimeError("adapter_name_or_path requires `peft` to be installed.") from exc
+        model = PeftModel.from_pretrained(
+            model,
+            adapter_name_or_path,
+            is_trainable=False,
+        )
+        if not hasattr(model, "merge_and_unload"):
+            raise RuntimeError(
+                f"PEFT adapter {adapter_name_or_path} does not support merge_and_unload for evaluation."
+            )
+        return model.merge_and_unload()
+
+    @staticmethod
+    def _display_name(path: str) -> str:
+        parts = Path(path).parts
+        if len(parts) >= 2:
+            return "/".join(parts[-2:])
+        return path
 
     def encode(
         self,

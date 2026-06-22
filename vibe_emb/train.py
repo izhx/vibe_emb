@@ -9,6 +9,7 @@ from typing import Any, Dict
 
 import transformers
 import yaml
+import torch
 import torch.distributed as dist
 from transformers import AutoTokenizer, TrainingArguments, set_seed
 from transformers.trainer_callback import TrainerCallback
@@ -21,6 +22,13 @@ from .modeling import EmbeddingModel, build_base_model, maybe_apply_peft
 from .trainer import EmbeddingTrainer
 
 logger = logging.getLogger(__name__)
+
+
+def _set_cuda_device_from_local_rank() -> None:
+    if not torch.cuda.is_available():
+        return
+    local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+    torch.cuda.set_device(local_rank)
 
 
 class _ReadableYamlDumper(yaml.SafeDumper):
@@ -233,6 +241,7 @@ def main() -> None:
     parser.add_argument("--resume_from_checkpoint")
     parser.add_argument("--overwrite_output_dir", action="store_true")
     args = parser.parse_args()
+    _set_cuda_device_from_local_rank()
     EmbeddingTrainRunner(args.config, args).run()
 
 
