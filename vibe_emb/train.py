@@ -163,7 +163,11 @@ class EmbeddingTrainRunner:
         self.tokenizer = self._load_tokenizer()
         self.model = self._load_model()
         self.train_dataset = self._load_train_dataset()
-        self.collator = EmbeddingCollator(self.tokenizer, pad_to_multiple_of=self.data_args.pad_to_multiple_of)
+        self.collator = EmbeddingCollator(
+            self.tokenizer,
+            pad_to_multiple_of=self.data_args.pad_to_multiple_of,
+            append_eos_token=self.data_args.append_eos_token,
+        )
         self.trainer = self._load_trainer()
 
     def _load_tokenizer(self):
@@ -178,6 +182,14 @@ class EmbeddingTrainRunner:
                 raise ValueError("Tokenizer has neither pad_token nor eos_token; please configure a pad token.")
             tokenizer.pad_token = tokenizer.eos_token
             logger.info("Tokenizer pad_token was missing; using eos_token as pad_token.")
+        if self.model_args.tokenizer_padding_side:
+            if self.model_args.tokenizer_padding_side not in {"left", "right"}:
+                raise ValueError(
+                    "model.tokenizer_padding_side must be 'left' or 'right'; "
+                    f"got {self.model_args.tokenizer_padding_side!r}."
+                )
+            tokenizer.padding_side = self.model_args.tokenizer_padding_side
+            logger.info("Tokenizer padding_side set to %s.", tokenizer.padding_side)
         return tokenizer
 
     def _load_model(self):

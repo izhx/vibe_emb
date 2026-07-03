@@ -12,6 +12,7 @@ class ModelConfig:
     cache_dir: Optional[str] = None
     trust_remote_code: bool = True
     use_fast_tokenizer: bool = True
+    tokenizer_padding_side: Optional[str] = None
     torch_dtype: Optional[str] = None
     pooling: str = "last_token"
     normalize_embeddings: bool = True
@@ -53,6 +54,7 @@ class DataConfig:
     default_query_instruction_format: str = "Instruct: {}\nQuery: {}"
     default_passage_instruction_format: str = "{}{}"
     pad_to_multiple_of: Optional[int] = 8
+    append_eos_token: bool = False
     same_dataset_within_batch: bool = True
     cache_dir: Optional[str] = None
 

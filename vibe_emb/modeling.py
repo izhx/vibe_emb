@@ -75,7 +75,11 @@ def maybe_apply_peft(base_model: PreTrainedModel, model_args: ModelConfig) -> Pr
         # This is a warm-start path, not a Trainer checkpoint resume. The base
         # model still comes from model_name_or_path, while adapter weights and
         # their PEFT config come from the adapter checkpoint and remain trainable.
-        model = PeftModel.from_pretrained(base_model, adapter_path, is_trainable=True)
+        # PEFT infers bare "cuda" by default when CUDA is available. With
+        # safetensors that can create a context on visible cuda:0 for every
+        # rank before Trainer moves the model to each local rank. Keep adapter
+        # warm-start loading on CPU and let Trainer/DDP perform the device move.
+        model = PeftModel.from_pretrained(base_model, adapter_path, is_trainable=True, torch_device="cpu")
         model.print_trainable_parameters()
         return model
 

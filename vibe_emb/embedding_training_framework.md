@@ -184,7 +184,7 @@ model:
   peft_adapter_name_or_path: results/vibe-embedder-full/checkpoint-1000
 ```
 
-This is a warm-start path, not a Trainer checkpoint resume. The loader calls `PeftModel.from_pretrained(base_model, adapter_path, is_trainable=True)`, so adapter weights are initialized from the checkpoint and remain trainable, while optimizer, scheduler, RNG, and `global_step` start fresh. The adapter checkpoint must contain `adapter_config.json`. If `peft_adapter_name_or_path` and `peft_config` are both set, the adapter checkpoint's config is authoritative and `peft_config` is only preserved in saved experiment config for human reference.
+This is a warm-start path, not a Trainer checkpoint resume. The loader calls `PeftModel.from_pretrained(base_model, adapter_path, is_trainable=True, torch_device="cpu")`, so adapter weights are initialized from the checkpoint on CPU and remain trainable, while optimizer, scheduler, RNG, and `global_step` start fresh. Keeping the adapter load on CPU avoids PEFT/safetensors creating an early CUDA context on visible `cuda:0`; Trainer/DDP still moves the complete model to the process-local GPU. The adapter checkpoint must contain `adapter_config.json`. If `peft_adapter_name_or_path` and `peft_config` are both set, the adapter checkpoint's config is authoritative and `peft_config` is only preserved in saved experiment config for human reference.
 
 Do not set `model.model_name_or_path` directly to an adapter-only checkpoint such as `results/vibe-embedder-full/checkpoint-1000`. That directory contains PEFT adapter files plus Trainer state, not a full `AutoModel` checkpoint.
 
