@@ -604,14 +604,3 @@ class MultiDatasetBatchDataset(Dataset):
             self.close()
         except Exception:
             pass
-
-
-class RefreshEpochCallback:
-    """Tiny callback object to avoid importing Trainer types in data.py."""
-
-    def __init__(self, dataset: MultiDatasetBatchDataset) -> None:
-        self.dataset = dataset
-
-    def on_epoch_begin(self, args, state, control, **kwargs):  # noqa: ANN001
-        self.dataset.refresh_epoch(int(state.epoch or 0))
-        return control

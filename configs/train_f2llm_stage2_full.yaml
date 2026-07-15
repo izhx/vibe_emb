@@ -6,7 +6,7 @@ model:
   peft_config:
     type: LoraConfig
     params:
-      r: 32
+      r: 64
       lora_alpha: 64
       lora_dropout: 0.0
       target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, down_proj, up_proj]
@@ -39,7 +39,7 @@ data:
       no_in_batch_neg: true
 
 training:
-  output_dir: results/f2llm-s2-lora
+  output_dir: results/f2llm-s2-lora64
   # overwrite_output_dir: true
   do_train: true
   num_train_epochs: 2

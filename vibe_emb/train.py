@@ -12,9 +12,9 @@ import yaml
 import torch
 import torch.distributed as dist
 from transformers import AutoTokenizer, TrainingArguments, set_seed
-from transformers.trainer_callback import TrainerCallback
 from transformers.trainer_utils import get_last_checkpoint
 
+from .callbacks import DatasetRefreshCallback, DatasetStatsCallback, TrainingProgressCallback
 from .collator import EmbeddingCollator
 from .config import load_yaml_config, parse_sections, to_plain_dict
 from .data import MultiDatasetBatchDataset
@@ -42,33 +42,6 @@ def _str_presenter(dumper: yaml.SafeDumper, data: str):
 
 
 _ReadableYamlDumper.add_representer(str, _str_presenter)
-
-
-class DatasetRefreshCallback(TrainerCallback):
-    """Rebuild the deterministic global batch plan at each epoch boundary."""
-    def __init__(self, dataset: MultiDatasetBatchDataset) -> None:
-        self.dataset = dataset
-
-    def on_epoch_begin(self, args, state, control, **kwargs):  # noqa: ANN001
-        epoch = int(state.epoch or 0)
-        # The dataset already owns epoch 0 when Trainer starts. Rebuild only
-        # when Trainer advances to a new epoch.
-        if epoch != self.dataset.epoch:
-            self.dataset.refresh_epoch(epoch)
-        return control
-
-
-class DatasetStatsCallback(TrainerCallback):
-    """Report dataset consumption using Trainer's existing logging cadence."""
-    def __init__(self, dataset: MultiDatasetBatchDataset) -> None:
-        self.dataset = dataset
-
-    def on_log(self, args, state, control, **kwargs):  # noqa: ANN001
-        # Follow Trainer logging cadence instead of adding another interval.
-        # This keeps dataset consumption stats aligned with loss/lr logs.
-        if args.process_index == 0:
-            self.dataset.log_consumption_stats("consumed")
-        return control
 
 
 def _setup_logging(output_dir: str, process_index: int) -> None:
@@ -117,6 +90,7 @@ def _build_training_args(training_raw: Dict[str, Any]) -> TrainingArguments:
     training_raw.setdefault("dataloader_num_workers", 0)
     training_raw.setdefault("remove_unused_columns", False)
     training_raw.setdefault("report_to", "none")
+    training_raw.setdefault("disable_tqdm", True)
     if training_raw["gradient_accumulation_steps"] != 1:
         raise ValueError("gradient_accumulation_steps must be 1 for contrastive embedding training.")
     if training_raw["per_device_train_batch_size"] != 1:
@@ -226,6 +200,7 @@ class EmbeddingTrainRunner:
         )
         trainer.add_callback(DatasetRefreshCallback(self.train_dataset))
         trainer.add_callback(DatasetStatsCallback(self.train_dataset))
+        trainer.add_callback(TrainingProgressCallback())
         return trainer
 
     def run(self) -> None:

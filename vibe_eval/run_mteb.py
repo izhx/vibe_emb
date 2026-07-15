@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import logging
 import os
 import sys
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -23,38 +26,38 @@ logging.getLogger("mteb").setLevel(logging.INFO)
 os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
 
 DEFAULT_TASKS = [
-    # "NanoMSMARCORetrieval",
-    # "AppsRetrieval",
-    # "Core17InstructionRetrieval",
-
-    # basic
-    "NanoArguAnaRetrieval",
-    "NanoClimateFeverRetrieval",
-    "NanoDBPediaRetrieval",
-    "NanoFEVERRetrieval",
-    "NanoFiQA2018Retrieval",
-    "NanoHotpotQARetrieval",
     "NanoMSMARCORetrieval",
-    "NanoNFCorpusRetrieval",
-    "NanoNQRetrieval",
-    "NanoQuoraRetrieval",
-    "NanoSciFactRetrieval",
-    "NanoSCIDOCSRetrieval",
-    "NanoTouche2020Retrieval",
-
-    # code
     "AppsRetrieval",
-    "CodeEditSearchRetrieval",
-    "CodeSearchNetRetrieval",
-    "CodeTransOceanContest",
-    "CodeTransOceanDL",
-    "CosQA",
-    "StackOverflowQA",
-
-    # FollowIR
     "Core17InstructionRetrieval",
-    "News21InstructionRetrieval",
-    "Robust04InstructionRetrieval",
+
+    # # basic
+    # "NanoArguAnaRetrieval",
+    # "NanoClimateFeverRetrieval",
+    # "NanoDBPediaRetrieval",
+    # "NanoFEVERRetrieval",
+    # "NanoFiQA2018Retrieval",
+    # "NanoHotpotQARetrieval",
+    # "NanoMSMARCORetrieval",
+    # "NanoNFCorpusRetrieval",
+    # "NanoNQRetrieval",
+    # "NanoQuoraRetrieval",
+    # "NanoSciFactRetrieval",
+    # "NanoSCIDOCSRetrieval",
+    # "NanoTouche2020Retrieval",
+
+    # # code
+    # "AppsRetrieval",
+    # "CodeEditSearchRetrieval",
+    # "CodeSearchNetRetrieval",
+    # "CodeTransOceanContest",
+    # "CodeTransOceanDL",
+    # "CosQA",
+    # "StackOverflowQA",
+
+    # # FollowIR
+    # "Core17InstructionRetrieval",
+    # "News21InstructionRetrieval",
+    # "Robust04InstructionRetrieval",
 
     # # BRIGHT
     # "BrightBiologyRetrieval",
@@ -64,7 +67,7 @@ DEFAULT_TASKS = [
     # "BrightSustainableLivingRetrieval",
     # "BrightTheoremQATheoremsRetrieval",
 
-    "ToolRetRetrieval"
+    # "ToolRetRetrieval"
 ]
 
 
@@ -76,7 +79,8 @@ def parse_args() -> argparse.Namespace:
         "--model_name_or_path",
         "--checkpoint",
         dest="model_name_or_path",
-        default="data/raw/Qwen2.5-0.5B",
+        # default="data/raw/Qwen2.5-0.5B",
+        default="/mnt/share/models/Qwen3-0.6B",
         help=(
             "Full Hugging Face model checkpoint/directory to evaluate, or the base model "
             "when --adapter is set. --checkpoint is kept as a backwards-compatible alias."
@@ -87,10 +91,39 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional PEFT adapter checkpoint to load and merge onto --model_name_or_path.",
     )
-    parser.add_argument("--tasks", nargs="+", default=DEFAULT_TASKS)
+    parser.add_argument(
+        "--tasks",
+        nargs="+",
+        default=None,
+        help=(
+            "Explicit MTEB task names. When neither --tasks nor --benchmarks is "
+            "provided, the script uses its built-in default task list."
+        ),
+    )
+    parser.add_argument(
+        "--benchmarks",
+        nargs="+",
+        default=None,
+        help=(
+            "MTEB benchmark names, for example 'MTEB(eng, v2)' "
+            "'MTEB(Code, v1)' BRIGHT. Benchmark-defined tasks, subsets, and "
+            "splits are used."
+        ),
+    )
+    parser.add_argument(
+        "--no_model",
+        "--no-model",
+        dest="no_model",
+        action="store_true",
+        help=(
+            "Do not load a tokenizer or model and do not evaluate. Resolve the "
+            "selected tasks, call task.load_data() for each, and exit."
+        ),
+    )
     parser.add_argument("--eval_splits", nargs="+", default=None)
     parser.add_argument("--eval_subsets", nargs="+", default=None)
-    parser.add_argument("--cache_dir", default="/data8/zhangxin/vibe_emb/.cache")
+    # parser.add_argument("--cache_dir", default="/data8/zhangxin/vibe_emb/.cache")
+    parser.add_argument("--cache_dir", default="/root/mteb_hf_cache")
     parser.add_argument("--output_folder", default="results/mteb_eval")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--max_length", type=int, default=2048)
@@ -122,18 +155,105 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_tasks(task_names: list[str]):
-    import mteb
-    from vibe_eval.tasks.toolret import ToolRetRetrieval
+def resolve_task_selection(
+    task_names: Sequence[str] | None,
+    benchmark_names: Sequence[str] | None,
+) -> tuple[list[str], list[str]]:
+    """Resolve CLI defaults without mixing default tasks into benchmark runs."""
+    if task_names is None and not benchmark_names:
+        return list(DEFAULT_TASKS), []
+    return list(task_names or ()), list(benchmark_names or ())
 
-    local_tasks = {
-        "ToolRetRetrieval": ToolRetRetrieval,
-    }
-    tasks = [local_tasks[name]() for name in task_names if name in local_tasks]
-    mteb_task_names = [name for name in task_names if name not in local_tasks]
+
+def build_tasks(
+    task_names: Sequence[str] | None = None,
+    benchmark_names: Sequence[str] | None = None,
+) -> list[Any]:
+    import mteb
+
+    requested_tasks, requested_benchmarks = resolve_task_selection(
+        task_names,
+        benchmark_names,
+    )
+
+    tasks: list[Any] = []
+    local_task_names = {"ToolRetRetrieval"}
+    if local_task_names.intersection(requested_tasks):
+        from vibe_eval.tasks.toolret import ToolRetRetrieval
+
+        local_tasks = {
+            "ToolRetRetrieval": ToolRetRetrieval,
+        }
+        tasks.extend(
+            local_tasks[name]() for name in requested_tasks if name in local_tasks
+        )
+
+    mteb_task_names = [
+        name for name in requested_tasks if name not in local_task_names
+    ]
     if mteb_task_names:
         tasks.extend(mteb.get_tasks(tasks=mteb_task_names))
+
+    for benchmark_name in requested_benchmarks:
+        benchmark = mteb.get_benchmark(benchmark_name)
+        tasks.extend(benchmark.tasks)
+
+    if not tasks:
+        raise ValueError("No MTEB tasks were selected.")
     return tasks
+
+
+def _iter_download_tasks(tasks: Sequence[Any]):
+    for task in tasks:
+        if getattr(task, "is_aggregate", False):
+            yield from _iter_download_tasks(task.tasks)
+        else:
+            yield task
+
+
+def _unload_task_data(task: Any) -> None:
+    if getattr(task, "data_loaded", False):
+        task.unload_data()
+
+    # Some legacy retrieval tasks keep their loaded data outside `task.dataset`.
+    for attribute in (
+        "corpus",
+        "queries",
+        "relevant_docs",
+        "instructions",
+        "top_ranked",
+    ):
+        if attribute in vars(task):
+            setattr(task, attribute, None)
+    gc.collect()
+
+
+def download_task_data(tasks: Sequence[Any]) -> None:
+    download_tasks = list(_iter_download_tasks(tasks))
+    total = len(download_tasks)
+    failures: list[tuple[str, Exception]] = []
+    for index, task in enumerate(download_tasks, start=1):
+        task_name = task.metadata.name
+        print(f"[{index}/{total}] Loading dataset for {task_name}", flush=True)
+        try:
+            task.load_data()
+        except Exception as error:
+            failures.append((task_name, error))
+            print(
+                f"[{index}/{total}] Failed dataset for {task_name}: "
+                f"{type(error).__name__}: {error}",
+                flush=True,
+            )
+            continue
+        finally:
+            _unload_task_data(task)
+        print(f"[{index}/{total}] Cached dataset for {task_name}", flush=True)
+
+    if failures:
+        failed_names = ", ".join(name for name, _ in failures)
+        raise RuntimeError(
+            f"Failed to cache {len(failures)}/{total} datasets: {failed_names}"
+        )
 
 
 def main() -> None:
@@ -148,6 +268,11 @@ def main() -> None:
     os.environ["HF_HOME"] = str(cache_dir.resolve())
     # os.environ["HF_DATASETS_CACHE"] = str((cache_dir / "datasets").resolve())
     # os.environ["TRANSFORMERS_CACHE"] = str((cache_dir / "transformers").resolve())
+
+    tasks = build_tasks(args.tasks, args.benchmarks)
+    if args.no_model:
+        download_task_data(tasks)
+        return
 
     import mteb
     from vibe_eval.modeling import QwenDecoderOnlyEmbedder
@@ -168,7 +293,6 @@ def main() -> None:
         use_flash_attn=not args.no_flash_attn,
     )
 
-    tasks = build_tasks(args.tasks)
     evaluator = mteb.MTEB(tasks=tasks)
     results = evaluator.run(
         model,
