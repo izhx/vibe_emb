@@ -1,7 +1,7 @@
 # vibe_emb
 
 ## ENV
-<!-- 在哈深机器是暂时用 viet 环境. -->
+<!-- 在哈深机器是暂时用 viet 环境. 在带/mnt/的计算集群用 /mnt/share/envs/embt 环境 -->
 
 ```shell
 conda create -n viet python=3.12

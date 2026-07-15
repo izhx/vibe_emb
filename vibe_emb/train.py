@@ -45,15 +45,21 @@ _ReadableYamlDumper.add_representer(str, _str_presenter)
 
 
 class DatasetRefreshCallback(TrainerCallback):
+    """Rebuild the deterministic global batch plan at each epoch boundary."""
     def __init__(self, dataset: MultiDatasetBatchDataset) -> None:
         self.dataset = dataset
 
     def on_epoch_begin(self, args, state, control, **kwargs):  # noqa: ANN001
-        self.dataset.refresh_epoch(int(state.epoch or 0))
+        epoch = int(state.epoch or 0)
+        # The dataset already owns epoch 0 when Trainer starts. Rebuild only
+        # when Trainer advances to a new epoch.
+        if epoch != self.dataset.epoch:
+            self.dataset.refresh_epoch(epoch)
         return control
 
 
 class DatasetStatsCallback(TrainerCallback):
+    """Report dataset consumption using Trainer's existing logging cadence."""
     def __init__(self, dataset: MultiDatasetBatchDataset) -> None:
         self.dataset = dataset
 
@@ -126,6 +132,7 @@ def _build_training_args(training_raw: Dict[str, Any]) -> TrainingArguments:
 
 
 class EmbeddingTrainRunner:
+    """Construct and run one YAML-configured embedding training process."""
     def __init__(self, config_path: str, cli_args: argparse.Namespace) -> None:
         raw = _apply_cli_overrides(load_yaml_config(config_path), cli_args)
         self.raw_config = raw
@@ -233,15 +240,18 @@ class EmbeddingTrainRunner:
                 logger.info("Checkpoint detected; resuming from %s", last_checkpoint)
 
         checkpoint = self.training_args.resume_from_checkpoint or last_checkpoint
-        train_result = self.trainer.train(resume_from_checkpoint=checkpoint)
-        self.trainer.save_model()
-        metrics = train_result.metrics
-        metrics["train_batches"] = len(self.train_dataset)
-        self.trainer.log_metrics("train", metrics)
-        self.trainer.save_metrics("train", metrics)
-        self.trainer.save_state()
-        if dist.is_available() and dist.is_initialized():
-            dist.destroy_process_group()
+        try:
+            train_result = self.trainer.train(resume_from_checkpoint=checkpoint)
+            self.trainer.save_model()
+            metrics = train_result.metrics
+            metrics["train_batches"] = len(self.train_dataset)
+            self.trainer.log_metrics("train", metrics)
+            self.trainer.save_metrics("train", metrics)
+            self.trainer.save_state()
+        finally:
+            self.train_dataset.close()
+            if dist.is_available() and dist.is_initialized():
+                dist.destroy_process_group()
 
 
 def main() -> None:

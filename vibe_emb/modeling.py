@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EmbeddingOutput(ModelOutput):
+    """Trainer-compatible loss output with optional embeddings for inspection."""
     loss: Optional[Tensor] = None
     scores: Optional[Tensor] = None
     q_reps: Optional[Tensor] = None
@@ -105,6 +106,7 @@ def maybe_apply_peft(base_model: PreTrainedModel, model_args: ModelConfig) -> Pr
 
 
 class EmbeddingModel(nn.Module):
+    """Encoder wrapper implementing task-aware contrastive embedding loss."""
     def __init__(
         self,
         base_model: PreTrainedModel,
@@ -187,6 +189,7 @@ class EmbeddingModel(nn.Module):
 
     @staticmethod
     def _local_scores(q_reps: Tensor, p_reps: Tensor, all_scores: Tensor) -> Tensor:
+        """Select each query's contiguous explicit passage group from a score matrix."""
         group_size = p_reps.size(0) // q_reps.size(0)
         base = torch.arange(q_reps.size(0), device=q_reps.device) * group_size
         cols = [all_scores[torch.arange(q_reps.size(0), device=q_reps.device), base + i] for i in range(group_size)]
@@ -214,12 +217,21 @@ class EmbeddingModel(nn.Module):
         no_in_batch_neg: bool,
         temperature: float,
     ) -> tuple[Tensor, Tensor]:
+        """Compute explicit-group or in-batch contrastive loss.
+
+        ``p_reps`` is flattened as one fixed-size group per query, with the
+        positive at offset zero. Therefore positive targets in a full score
+        matrix are ``query_index * group_size``.
+        """
         group_size = p_reps.size(0) // q_reps.size(0)
         teacher_targets = None
         if teacher_scores is not None:
             teacher_targets = F.softmax(teacher_scores.to(q_reps.device).view(q_reps.size(0), -1), dim=-1).detach()
 
         if no_in_batch_neg:
+            # Used by clustering and two-way classification: other examples in
+            # the batch may be valid semantic matches, so score only the hard
+            # negatives explicitly attached to this query.
             scores = self.compute_score(q_reps, p_reps, temperature)
             local_scores = self._local_scores(q_reps, p_reps, scores)
             targets = torch.zeros(q_reps.size(0), device=q_reps.device, dtype=torch.long)
@@ -229,6 +241,9 @@ class EmbeddingModel(nn.Module):
             return local_scores, loss
 
         if self.negatives_cross_device and self.training:
+            # All ranks have an identical dataset/group-size plan. Gathered
+            # passage groups therefore retain the same positive-at-group-start
+            # layout used by the target calculation below.
             q_for_score = self._dist_gather_tensor(q_reps)
             p_for_score = self._dist_gather_tensor(p_reps)
             scores = self.compute_score(q_for_score, p_for_score, temperature)

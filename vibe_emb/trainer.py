@@ -12,6 +12,43 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingTrainer(Trainer):
+    def _load_from_checkpoint(self, resume_from_checkpoint: str, model=None) -> None:
+        """Load adapter-only PEFT checkpoints saved by EmbeddingModel.save.
+
+        Transformers' default loader only recognizes full-model checkpoint
+        filenames. Our normal checkpoints intentionally contain
+        adapter_model.safetensors instead, while optimizer/scheduler/RNG state
+        is still managed by Trainer after this hook returns.
+        """
+        adapter_config = os.path.join(resume_from_checkpoint, "adapter_config.json")
+        adapter_weights = os.path.join(resume_from_checkpoint, "adapter_model.safetensors")
+        if not (os.path.isfile(adapter_config) and os.path.isfile(adapter_weights)):
+            return super()._load_from_checkpoint(resume_from_checkpoint, model=model)
+
+        target = model or self.model
+        if not hasattr(target, "model"):
+            raise TypeError(f"Expected EmbeddingModel wrapper while loading {resume_from_checkpoint}")
+        peft_model = target.model
+        try:
+            from peft import set_peft_model_state_dict
+            from safetensors.torch import load_file
+        except Exception as exc:  # pragma: no cover - optional dependency path
+            raise RuntimeError("Resuming an adapter checkpoint requires peft and safetensors") from exc
+        if not hasattr(peft_model, "peft_config"):
+            raise ValueError(
+                f"Checkpoint {resume_from_checkpoint} is a PEFT adapter, but the configured model is not PEFT"
+            )
+        state_dict = load_file(adapter_weights, device="cpu")
+        load_result = set_peft_model_state_dict(peft_model, state_dict, adapter_name="default")
+        missing = [key for key in getattr(load_result, "missing_keys", []) if "lora_" in key]
+        unexpected = list(getattr(load_result, "unexpected_keys", []))
+        if missing or unexpected:
+            raise ValueError(
+                f"Adapter checkpoint mismatch for {resume_from_checkpoint}: "
+                f"missing_lora={missing[:5]}, unexpected={unexpected[:5]}"
+            )
+        logger.info("Loaded PEFT adapter checkpoint from %s", resume_from_checkpoint)
+
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):  # noqa: ANN001
         del kwargs
         outputs = model(**inputs)
@@ -23,6 +60,7 @@ class EmbeddingTrainer(Trainer):
         # MultiDatasetBatchDataset already returns a complete contrastive batch.
         # Use a plain SequentialSampler and batch_size=1 so Trainer does not
         # reshuffle or stack pre-batched items and break the distributed plan.
+        logger.info("Creating sequential train DataLoader with %d planned batches", len(self.train_dataset))
         return DataLoader(
             self.train_dataset,
             batch_size=self.args.per_device_train_batch_size,

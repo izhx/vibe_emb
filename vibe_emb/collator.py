@@ -9,6 +9,7 @@ from transformers import PreTrainedTokenizerBase
 
 @dataclass
 class EmbeddingCollator:
+    """Tokenize one dataset-prebatched item without changing its group layout."""
     tokenizer: PreTrainedTokenizerBase
     pad_to_multiple_of: Optional[int] = 8
     append_eos_token: bool = False
@@ -44,6 +45,7 @@ class EmbeddingCollator:
         )
 
     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Collate the single prebuilt rank-local contrastive batch."""
         if len(features) != 1:
             raise ValueError("EmbeddingCollator expects dataset-prebatched features and Trainer batch_size=1.")
         feature = features[0]

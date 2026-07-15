@@ -40,6 +40,7 @@ def load_yaml_config(path: str) -> Dict[str, Any]:
 
 
 def parse_sections(raw: Dict[str, Any]) -> tuple[ModelConfig, DataConfig, Dict[str, Any], EmbedTrainingExtras]:
+    """Split YAML into local dataclasses and Hugging Face TrainingArguments fields."""
     raw = copy.deepcopy(raw)
     model_raw = raw.get("model") or {}
     data_raw = raw.get("data") or {}
@@ -47,17 +48,20 @@ def parse_sections(raw: Dict[str, Any]) -> tuple[ModelConfig, DataConfig, Dict[s
 
     if "model_name_or_path" not in model_raw:
         raise ValueError("Missing required config field: model.model_name_or_path")
-    if not data_raw.get("datasets"):
-        raise ValueError("Missing required config field: data.datasets")
+    if not data_raw.get("datasets") and not data_raw.get("indexed_dataset_manifest"):
+        raise ValueError("At least one of data.datasets or data.indexed_dataset_manifest is required")
 
     model_args = _build_dataclass(ModelConfig, model_raw)
 
+    data_raw.setdefault("datasets", [])
     for i, dataset_raw in enumerate(data_raw["datasets"]):
         _warn_unknown_keys(DatasetConfig, dataset_raw, f"data.datasets[{i}]")
     dataset_args = [_build_dataclass(DatasetConfig, d) for d in data_raw["datasets"]]
     data_raw["datasets"] = dataset_args
     data_args = _build_dataclass(DataConfig, data_raw)
 
+    # Embedding-only fields intentionally live in the ``training`` YAML
+    # section, but must not be forwarded to transformers.TrainingArguments.
     extras = _build_dataclass(EmbedTrainingExtras, training_raw)
     training_keys = {f.name for f in fields(EmbedTrainingExtras)}
     training_args = {k: v for k, v in training_raw.items() if k not in training_keys}
