@@ -1,0 +1,3522 @@
+schema_version: 1
+catalog_version: f2llm-v2-stage2-2026-07-14
+dataset_release_id: codefuse-ai/F2LLM-v2@d520b8ad02c86d5e5611441c6196ff65d8888927
+notes:
+- The original 121 sources are transcribed from ML-Embed appendix Tables 8 and 9.
+- The expanded 157-source profile is transcribed from F2LLM-v2 training-data Tables 1 and 2.
+- Language- or direction-specific physical files are explicit independent sampling units.
+- F2LLM-v2 groups UNPC, ParaCrawl, and CLIRMatrix direction shards by paper-level source; this is the 80k grouping that reproduces the reported approximately 18M mixture.
+- mela.parquet is the release-time concatenation of MELA, ScaLA, and DaLA; exact paper-size row ranges preserve the three source boundaries.
+profiles:
+  ml_embed_stage2:
+    sample_limit: 100000
+    default_seed: 42
+    enabled_sources:
+    - unpc
+    - paracrawl
+    - bactrianx_translation
+    - europarl
+    - webfaq
+    - mmarco
+    - paq
+    - squad
+    - stack_exchange
+    - arguana
+    - natural_questions
+    - hotpotqa
+    - eli5
+    - fiqa2018
+    - bioasq
+    - nfcorpus
+    - triviaqa
+    - pubmedqa
+    - amazon_qa
+    - miracl
+    - mr_tydi
+    - mldr
+    - mkqa
+    - stackoverflowqa
+    - procqa
+    - yahoo_answers
+    - gooaq
+    - t2ranking
+    - dureader
+    - cmedqav2
+    - huatuo_kgqa
+    - huatuo_encqa
+    - multi_cpr_medical
+    - healthcaremagic
+    - medicalqa_ru
+    - aya
+    - muri
+    - oasst2
+    - multialpaca
+    - wildchat
+    - m2lingual
+    - natural_reasoning
+    - infinity_instruct
+    - coig
+    - medinstruct
+    - codefeedbackst
+    - codefeedbackmt
+    - openorca
+    - medi2
+    - medicalinstruction
+    - s2orc_title_abstract
+    - cord_19
+    - multi_cpr_ecom
+    - esci
+    - clirmatrix
+    - snli
+    - mnli
+    - anli
+    - xnli
+    - ocnli
+    - xcodeeval_code2code
+    - xcodeeval_translation
+    - codesearchnet_ccr
+    - arxiv_clustering_p2p
+    - arxiv_clustering_s2s
+    - biorxiv_clustering_p2p
+    - biorxiv_clustering_s2s
+    - medrxiv_clustering_p2p
+    - medrxiv_clustering_s2s
+    - mlsum_clustering
+    - twentynewsgroups
+    - sib200
+    - reddit_clustering_p2p
+    - reddit_clustering_s2s
+    - stack_exchange_clustering_p2p
+    - stack_exchange_clustering_s2s
+    - thucnews
+    - tnews
+    - csl
+    - xsum
+    - cnn_dm
+    - mlsum_retrieval
+    - sentence_compression
+    - ocgi
+    - opencodereasoning_2
+    - xcodeeval_nl2code
+    - cosqa
+    - synthetictext2sql
+    - codesearchnet
+    - stackexchangedupquestions_s2s
+    - stackexchangedupquestions_p2p
+    - qqp
+    - stackoverflowdupquestions
+    - pawsx
+    - amazon_polarity
+    - imdb
+    - toxic_conversations
+    - amazon_counterfactual
+    - amazon_reviews
+    - emotion
+    - tweet_sentiment_extraction
+    - massive_intent
+    - mtop_intent
+    - banking77
+    - massive_scenario
+    - mtop_domain
+    - bactrianx_language_classification
+    - s2orc_title_citation
+    - s2orc_abstract_citation
+    - specter
+    - mela
+    - scala
+    - dala
+    - fever
+    - scifact
+    - coliee
+    - sts12
+    - sts22
+    - stsbenchmark
+    - sts22_crosslingual
+    - bq
+    excluded_contaminated_sources:
+    - mkqa
+    - sib200
+    paper_audit_query_count: 8317566
+    expected_source_count: 121
+  f2llm_stage2_80k:
+    sample_limit: 80000
+    default_seed: 42
+    expected_source_count: 157
+    enabled_sources:
+    - unpc
+    - paracrawl
+    - bactrianx_translation
+    - europarl
+    - webfaq
+    - mmarco
+    - paq
+    - squad
+    - stack_exchange
+    - arguana
+    - natural_questions
+    - hotpotqa
+    - eli5
+    - fiqa2018
+    - bioasq
+    - nfcorpus
+    - triviaqa
+    - pubmedqa
+    - amazon_qa
+    - miracl
+    - mr_tydi
+    - mldr
+    - mkqa
+    - stackoverflowqa
+    - procqa
+    - yahoo_answers
+    - gooaq
+    - t2ranking
+    - dureader
+    - cmedqav2
+    - huatuo_kgqa
+    - huatuo_encqa
+    - multi_cpr_medical
+    - healthcaremagic
+    - medicalqa_ru
+    - aya
+    - muri
+    - oasst2
+    - multialpaca
+    - wildchat
+    - m2lingual
+    - natural_reasoning
+    - infinity_instruct
+    - coig
+    - medinstruct
+    - codefeedbackst
+    - codefeedbackmt
+    - openorca
+    - medi2
+    - medicalinstruction
+    - s2orc_title_abstract
+    - cord_19
+    - multi_cpr_ecom
+    - esci
+    - clirmatrix
+    - snli
+    - mnli
+    - anli
+    - xnli
+    - ocnli
+    - xcodeeval_code2code
+    - xcodeeval_translation
+    - codesearchnet_ccr
+    - arxiv_clustering_p2p
+    - arxiv_clustering_s2s
+    - biorxiv_clustering_p2p
+    - biorxiv_clustering_s2s
+    - medrxiv_clustering_p2p
+    - medrxiv_clustering_s2s
+    - mlsum_clustering
+    - twentynewsgroups
+    - sib200
+    - reddit_clustering_p2p
+    - reddit_clustering_s2s
+    - stack_exchange_clustering_p2p
+    - stack_exchange_clustering_s2s
+    - thucnews
+    - tnews
+    - csl
+    - xsum
+    - cnn_dm
+    - mlsum_retrieval
+    - sentence_compression
+    - ocgi
+    - opencodereasoning_2
+    - xcodeeval_nl2code
+    - cosqa
+    - synthetictext2sql
+    - codesearchnet
+    - stackexchangedupquestions_s2s
+    - stackexchangedupquestions_p2p
+    - qqp
+    - stackoverflowdupquestions
+    - pawsx
+    - amazon_polarity
+    - imdb
+    - toxic_conversations
+    - amazon_counterfactual
+    - amazon_reviews
+    - emotion
+    - tweet_sentiment_extraction
+    - massive_intent
+    - mtop_intent
+    - banking77
+    - massive_scenario
+    - mtop_domain
+    - bactrianx_language_classification
+    - s2orc_title_citation
+    - s2orc_abstract_citation
+    - specter
+    - mela
+    - scala
+    - dala
+    - fever
+    - scifact
+    - coliee
+    - sts12
+    - sts22
+    - stsbenchmark
+    - sts22_crosslingual
+    - bq
+    - llm_retrieval_data
+    - refgpt
+    - lawzhidao
+    - medmcqa
+    - cmcqa
+    - medqa
+    - webmedqa
+    - medquad
+    - medical_flashcards
+    - mailruqa
+    - wikiomnia
+    - persianqa
+    - pquad
+    - parsquad
+    - mqa
+    - hotpotqa_nl
+    - siberiandataset
+    - ru_instruct
+    - koalpaca_realqa
+    - koalpaca
+    - komagpie
+    - nordic_text_matching
+    - nordic_retrieval
+    - nordic_classification
+    - dbpedia
+    - cmnli
+    - mscinli
+    - lcqmc
+    - waimai
+    - rusentiment
+    - cedr
+    - fever_nl
+    - qbqtc
+    - simclue
+    - lcsts
+    - nordic_sts
+    excluded_contaminated_sources: []
+    paper_audit_query_count: 18000000
+    source_unit_overrides:
+      unpc:
+      - sampling_unit_id: unpc
+        shards:
+        - unpc_ar2en.parquet
+        - unpc_ar2es.parquet
+        - unpc_ar2fr.parquet
+        - unpc_ar2ru.parquet
+        - unpc_ar2zh.parquet
+        - unpc_en2ar.parquet
+        - unpc_en2es.parquet
+        - unpc_en2fr.parquet
+        - unpc_en2ru.parquet
+        - unpc_en2zh.parquet
+        - unpc_es2ar.parquet
+        - unpc_es2en.parquet
+        - unpc_es2fr.parquet
+        - unpc_es2ru.parquet
+        - unpc_es2zh.parquet
+        - unpc_fr2ar.parquet
+        - unpc_fr2en.parquet
+        - unpc_fr2es.parquet
+        - unpc_fr2ru.parquet
+        - unpc_fr2zh.parquet
+        - unpc_ru2ar.parquet
+        - unpc_ru2en.parquet
+        - unpc_ru2es.parquet
+        - unpc_ru2fr.parquet
+        - unpc_ru2zh.parquet
+        - unpc_zh2ar.parquet
+        - unpc_zh2en.parquet
+        - unpc_zh2es.parquet
+        - unpc_zh2fr.parquet
+        - unpc_zh2ru.parquet
+      paracrawl:
+      - sampling_unit_id: paracrawl
+        shards:
+        - paracrawl_azj-en.parquet
+        - paracrawl_ca-es.parquet
+        - paracrawl_cs-pl.parquet
+        - paracrawl_de-pl.parquet
+        - paracrawl_en-azj.parquet
+        - paracrawl_en-hi.parquet
+        - paracrawl_en-hy.parquet
+        - paracrawl_en-id.parquet
+        - paracrawl_en-km.parquet
+        - paracrawl_en-ko.parquet
+        - paracrawl_en-lo.parquet
+        - paracrawl_en-my.parquet
+        - paracrawl_en-ne.parquet
+        - paracrawl_en-ps.parquet
+        - paracrawl_en-ru.parquet
+        - paracrawl_en-si.parquet
+        - paracrawl_en-so.parquet
+        - paracrawl_en-sw.parquet
+        - paracrawl_en-tg.parquet
+        - paracrawl_en-th.parquet
+        - paracrawl_en-tl.parquet
+        - paracrawl_en-uk.parquet
+        - paracrawl_en-vi.parquet
+        - paracrawl_en-zh.parquet
+        - paracrawl_es-ca.parquet
+        - paracrawl_es-eu.parquet
+        - paracrawl_es-gl.parquet
+        - paracrawl_eu-es.parquet
+        - paracrawl_fr-nl.parquet
+        - paracrawl_gl-es.parquet
+        - paracrawl_hi-en.parquet
+        - paracrawl_hy-en.parquet
+        - paracrawl_id-en.parquet
+        - paracrawl_km-en.parquet
+        - paracrawl_ko-en.parquet
+        - paracrawl_lo-en.parquet
+        - paracrawl_my-en.parquet
+        - paracrawl_ne-en.parquet
+        - paracrawl_nl-fr.parquet
+        - paracrawl_pl-cs.parquet
+        - paracrawl_pl-de.parquet
+        - paracrawl_ps-en.parquet
+        - paracrawl_ru-en.parquet
+        - paracrawl_si-en.parquet
+        - paracrawl_so-en.parquet
+        - paracrawl_sw-en.parquet
+        - paracrawl_tg-en.parquet
+        - paracrawl_th-en.parquet
+        - paracrawl_tl-en.parquet
+        - paracrawl_uk-en.parquet
+        - paracrawl_vi-en.parquet
+        - paracrawl_zh-en.parquet
+      clirmatrix:
+      - sampling_unit_id: clirmatrix
+        shards:
+        - clirmatrix_af-bg.parquet
+        - clirmatrix_ar-fr.parquet
+        - clirmatrix_bn-cs.parquet
+        - clirmatrix_cv-fa.parquet
+        - clirmatrix_en.parquet
+        - clirmatrix_es-pt.parquet
+        - clirmatrix_fi-ht.parquet
+        - clirmatrix_hu-ko.parquet
+        - clirmatrix_ja-de.parquet
+        - clirmatrix_ku-mk.parquet
+        - clirmatrix_ml-nl.parquet
+        - clirmatrix_nn-pms.parquet
+        - clirmatrix_pnb-sk.parquet
+        - clirmatrix_ru-it.parquet
+        - clirmatrix_sl-tg.parquet
+        - clirmatrix_th-uk.parquet
+        - clirmatrix_ur-yo.parquet
+        - clirmatrix_zh.parquet
+sources:
+- source_id: unpc
+  paper_name: UNPC
+  paper_table: 8
+  paper_category: Bitext Mining
+  language: '6'
+  task_type: retrieval
+  paper_size: 2922245
+  sampling_units:
+  - sampling_unit_id: unpc_ar2en
+    language: ar2en
+    shards:
+    - unpc_ar2en.parquet
+  - sampling_unit_id: unpc_ar2es
+    language: ar2es
+    shards:
+    - unpc_ar2es.parquet
+  - sampling_unit_id: unpc_ar2fr
+    language: ar2fr
+    shards:
+    - unpc_ar2fr.parquet
+  - sampling_unit_id: unpc_ar2ru
+    language: ar2ru
+    shards:
+    - unpc_ar2ru.parquet
+  - sampling_unit_id: unpc_ar2zh
+    language: ar2zh
+    shards:
+    - unpc_ar2zh.parquet
+  - sampling_unit_id: unpc_en2ar
+    language: en2ar
+    shards:
+    - unpc_en2ar.parquet
+  - sampling_unit_id: unpc_en2es
+    language: en2es
+    shards:
+    - unpc_en2es.parquet
+  - sampling_unit_id: unpc_en2fr
+    language: en2fr
+    shards:
+    - unpc_en2fr.parquet
+  - sampling_unit_id: unpc_en2ru
+    language: en2ru
+    shards:
+    - unpc_en2ru.parquet
+  - sampling_unit_id: unpc_en2zh
+    language: en2zh
+    shards:
+    - unpc_en2zh.parquet
+  - sampling_unit_id: unpc_es2ar
+    language: es2ar
+    shards:
+    - unpc_es2ar.parquet
+  - sampling_unit_id: unpc_es2en
+    language: es2en
+    shards:
+    - unpc_es2en.parquet
+  - sampling_unit_id: unpc_es2fr
+    language: es2fr
+    shards:
+    - unpc_es2fr.parquet
+  - sampling_unit_id: unpc_es2ru
+    language: es2ru
+    shards:
+    - unpc_es2ru.parquet
+  - sampling_unit_id: unpc_es2zh
+    language: es2zh
+    shards:
+    - unpc_es2zh.parquet
+  - sampling_unit_id: unpc_fr2ar
+    language: fr2ar
+    shards:
+    - unpc_fr2ar.parquet
+  - sampling_unit_id: unpc_fr2en
+    language: fr2en
+    shards:
+    - unpc_fr2en.parquet
+  - sampling_unit_id: unpc_fr2es
+    language: fr2es
+    shards:
+    - unpc_fr2es.parquet
+  - sampling_unit_id: unpc_fr2ru
+    language: fr2ru
+    shards:
+    - unpc_fr2ru.parquet
+  - sampling_unit_id: unpc_fr2zh
+    language: fr2zh
+    shards:
+    - unpc_fr2zh.parquet
+  - sampling_unit_id: unpc_ru2ar
+    language: ru2ar
+    shards:
+    - unpc_ru2ar.parquet
+  - sampling_unit_id: unpc_ru2en
+    language: ru2en
+    shards:
+    - unpc_ru2en.parquet
+  - sampling_unit_id: unpc_ru2es
+    language: ru2es
+    shards:
+    - unpc_ru2es.parquet
+  - sampling_unit_id: unpc_ru2fr
+    language: ru2fr
+    shards:
+    - unpc_ru2fr.parquet
+  - sampling_unit_id: unpc_ru2zh
+    language: ru2zh
+    shards:
+    - unpc_ru2zh.parquet
+  - sampling_unit_id: unpc_zh2ar
+    language: zh2ar
+    shards:
+    - unpc_zh2ar.parquet
+  - sampling_unit_id: unpc_zh2en
+    language: zh2en
+    shards:
+    - unpc_zh2en.parquet
+  - sampling_unit_id: unpc_zh2es
+    language: zh2es
+    shards:
+    - unpc_zh2es.parquet
+  - sampling_unit_id: unpc_zh2fr
+    language: zh2fr
+    shards:
+    - unpc_zh2fr.parquet
+  - sampling_unit_id: unpc_zh2ru
+    language: zh2ru
+    shards:
+    - unpc_zh2ru.parquet
+- source_id: paracrawl
+  paper_name: ParaCrawl
+  paper_table: 8
+  paper_category: Bitext Mining
+  language: '30'
+  task_type: retrieval
+  paper_size: 10684184
+  sampling_units:
+  - sampling_unit_id: paracrawl_azj_en
+    language: azj-en
+    shards:
+    - paracrawl_azj-en.parquet
+  - sampling_unit_id: paracrawl_ca_es
+    language: ca-es
+    shards:
+    - paracrawl_ca-es.parquet
+  - sampling_unit_id: paracrawl_cs_pl
+    language: cs-pl
+    shards:
+    - paracrawl_cs-pl.parquet
+  - sampling_unit_id: paracrawl_de_pl
+    language: de-pl
+    shards:
+    - paracrawl_de-pl.parquet
+  - sampling_unit_id: paracrawl_en_azj
+    language: en-azj
+    shards:
+    - paracrawl_en-azj.parquet
+  - sampling_unit_id: paracrawl_en_hi
+    language: en-hi
+    shards:
+    - paracrawl_en-hi.parquet
+  - sampling_unit_id: paracrawl_en_hy
+    language: en-hy
+    shards:
+    - paracrawl_en-hy.parquet
+  - sampling_unit_id: paracrawl_en_id
+    language: en-id
+    shards:
+    - paracrawl_en-id.parquet
+  - sampling_unit_id: paracrawl_en_km
+    language: en-km
+    shards:
+    - paracrawl_en-km.parquet
+  - sampling_unit_id: paracrawl_en_ko
+    language: en-ko
+    shards:
+    - paracrawl_en-ko.parquet
+  - sampling_unit_id: paracrawl_en_lo
+    language: en-lo
+    shards:
+    - paracrawl_en-lo.parquet
+  - sampling_unit_id: paracrawl_en_my
+    language: en-my
+    shards:
+    - paracrawl_en-my.parquet
+  - sampling_unit_id: paracrawl_en_ne
+    language: en-ne
+    shards:
+    - paracrawl_en-ne.parquet
+  - sampling_unit_id: paracrawl_en_ps
+    language: en-ps
+    shards:
+    - paracrawl_en-ps.parquet
+  - sampling_unit_id: paracrawl_en_ru
+    language: en-ru
+    shards:
+    - paracrawl_en-ru.parquet
+  - sampling_unit_id: paracrawl_en_si
+    language: en-si
+    shards:
+    - paracrawl_en-si.parquet
+  - sampling_unit_id: paracrawl_en_so
+    language: en-so
+    shards:
+    - paracrawl_en-so.parquet
+  - sampling_unit_id: paracrawl_en_sw
+    language: en-sw
+    shards:
+    - paracrawl_en-sw.parquet
+  - sampling_unit_id: paracrawl_en_tg
+    language: en-tg
+    shards:
+    - paracrawl_en-tg.parquet
+  - sampling_unit_id: paracrawl_en_th
+    language: en-th
+    shards:
+    - paracrawl_en-th.parquet
+  - sampling_unit_id: paracrawl_en_tl
+    language: en-tl
+    shards:
+    - paracrawl_en-tl.parquet
+  - sampling_unit_id: paracrawl_en_uk
+    language: en-uk
+    shards:
+    - paracrawl_en-uk.parquet
+  - sampling_unit_id: paracrawl_en_vi
+    language: en-vi
+    shards:
+    - paracrawl_en-vi.parquet
+  - sampling_unit_id: paracrawl_en_zh
+    language: en-zh
+    shards:
+    - paracrawl_en-zh.parquet
+  - sampling_unit_id: paracrawl_es_ca
+    language: es-ca
+    shards:
+    - paracrawl_es-ca.parquet
+  - sampling_unit_id: paracrawl_es_eu
+    language: es-eu
+    shards:
+    - paracrawl_es-eu.parquet
+  - sampling_unit_id: paracrawl_es_gl
+    language: es-gl
+    shards:
+    - paracrawl_es-gl.parquet
+  - sampling_unit_id: paracrawl_eu_es
+    language: eu-es
+    shards:
+    - paracrawl_eu-es.parquet
+  - sampling_unit_id: paracrawl_fr_nl
+    language: fr-nl
+    shards:
+    - paracrawl_fr-nl.parquet
+  - sampling_unit_id: paracrawl_gl_es
+    language: gl-es
+    shards:
+    - paracrawl_gl-es.parquet
+  - sampling_unit_id: paracrawl_hi_en
+    language: hi-en
+    shards:
+    - paracrawl_hi-en.parquet
+  - sampling_unit_id: paracrawl_hy_en
+    language: hy-en
+    shards:
+    - paracrawl_hy-en.parquet
+  - sampling_unit_id: paracrawl_id_en
+    language: id-en
+    shards:
+    - paracrawl_id-en.parquet
+  - sampling_unit_id: paracrawl_km_en
+    language: km-en
+    shards:
+    - paracrawl_km-en.parquet
+  - sampling_unit_id: paracrawl_ko_en
+    language: ko-en
+    shards:
+    - paracrawl_ko-en.parquet
+  - sampling_unit_id: paracrawl_lo_en
+    language: lo-en
+    shards:
+    - paracrawl_lo-en.parquet
+  - sampling_unit_id: paracrawl_my_en
+    language: my-en
+    shards:
+    - paracrawl_my-en.parquet
+  - sampling_unit_id: paracrawl_ne_en
+    language: ne-en
+    shards:
+    - paracrawl_ne-en.parquet
+  - sampling_unit_id: paracrawl_nl_fr
+    language: nl-fr
+    shards:
+    - paracrawl_nl-fr.parquet
+  - sampling_unit_id: paracrawl_pl_cs
+    language: pl-cs
+    shards:
+    - paracrawl_pl-cs.parquet
+  - sampling_unit_id: paracrawl_pl_de
+    language: pl-de
+    shards:
+    - paracrawl_pl-de.parquet
+  - sampling_unit_id: paracrawl_ps_en
+    language: ps-en
+    shards:
+    - paracrawl_ps-en.parquet
+  - sampling_unit_id: paracrawl_ru_en
+    language: ru-en
+    shards:
+    - paracrawl_ru-en.parquet
+  - sampling_unit_id: paracrawl_si_en
+    language: si-en
+    shards:
+    - paracrawl_si-en.parquet
+  - sampling_unit_id: paracrawl_so_en
+    language: so-en
+    shards:
+    - paracrawl_so-en.parquet
+  - sampling_unit_id: paracrawl_sw_en
+    language: sw-en
+    shards:
+    - paracrawl_sw-en.parquet
+  - sampling_unit_id: paracrawl_tg_en
+    language: tg-en
+    shards:
+    - paracrawl_tg-en.parquet
+  - sampling_unit_id: paracrawl_th_en
+    language: th-en
+    shards:
+    - paracrawl_th-en.parquet
+  - sampling_unit_id: paracrawl_tl_en
+    language: tl-en
+    shards:
+    - paracrawl_tl-en.parquet
+  - sampling_unit_id: paracrawl_uk_en
+    language: uk-en
+    shards:
+    - paracrawl_uk-en.parquet
+  - sampling_unit_id: paracrawl_vi_en
+    language: vi-en
+    shards:
+    - paracrawl_vi-en.parquet
+  - sampling_unit_id: paracrawl_zh_en
+    language: zh-en
+    shards:
+    - paracrawl_zh-en.parquet
+- source_id: bactrianx_translation
+  paper_name: BactrianX Translation
+  paper_table: 8
+  paper_category: Bitext Mining
+  language: '52'
+  task_type: clustering
+  paper_size: 491282
+  sampling_units:
+  - sampling_unit_id: bactrianx_translation
+    shards:
+    - bactrianx_translation.parquet
+- source_id: europarl
+  paper_name: Europarl
+  paper_table: 8
+  paper_category: Bitext Mining
+  language: '21'
+  task_type: clustering
+  paper_size: 477566
+  sampling_units:
+  - sampling_unit_id: europarl
+    shards:
+    - europarl.parquet
+- source_id: webfaq
+  paper_name: WebFAQ
+  paper_table: 8
+  paper_category: Question Answering
+  language: '49'
+  task_type: retrieval
+  paper_size: 4368504
+  sampling_units:
+  - sampling_unit_id: webfaq_ara
+    language: ara
+    shards:
+    - webfaq_ara.parquet
+  - sampling_unit_id: webfaq_aze
+    language: aze
+    shards:
+    - webfaq_aze.parquet
+  - sampling_unit_id: webfaq_ben
+    language: ben
+    shards:
+    - webfaq_ben.parquet
+  - sampling_unit_id: webfaq_bul
+    language: bul
+    shards:
+    - webfaq_bul.parquet
+  - sampling_unit_id: webfaq_cat
+    language: cat
+    shards:
+    - webfaq_cat.parquet
+  - sampling_unit_id: webfaq_ces
+    language: ces
+    shards:
+    - webfaq_ces.parquet
+  - sampling_unit_id: webfaq_dan
+    language: dan
+    shards:
+    - webfaq_dan.parquet
+  - sampling_unit_id: webfaq_deu
+    language: deu
+    shards:
+    - webfaq_deu.parquet
+  - sampling_unit_id: webfaq_ell
+    language: ell
+    shards:
+    - webfaq_ell.parquet
+  - sampling_unit_id: webfaq_eng
+    language: eng
+    shards:
+    - webfaq_eng.parquet
+  - sampling_unit_id: webfaq_est
+    language: est
+    shards:
+    - webfaq_est.parquet
+  - sampling_unit_id: webfaq_fas
+    language: fas
+    shards:
+    - webfaq_fas.parquet
+  - sampling_unit_id: webfaq_fin
+    language: fin
+    shards:
+    - webfaq_fin.parquet
+  - sampling_unit_id: webfaq_fra
+    language: fra
+    shards:
+    - webfaq_fra.parquet
+  - sampling_unit_id: webfaq_heb
+    language: heb
+    shards:
+    - webfaq_heb.parquet
+  - sampling_unit_id: webfaq_hin
+    language: hin
+    shards:
+    - webfaq_hin.parquet
+  - sampling_unit_id: webfaq_hrv
+    language: hrv
+    shards:
+    - webfaq_hrv.parquet
+  - sampling_unit_id: webfaq_hun
+    language: hun
+    shards:
+    - webfaq_hun.parquet
+  - sampling_unit_id: webfaq_ind
+    language: ind
+    shards:
+    - webfaq_ind.parquet
+  - sampling_unit_id: webfaq_isl
+    language: isl
+    shards:
+    - webfaq_isl.parquet
+  - sampling_unit_id: webfaq_ita
+    language: ita
+    shards:
+    - webfaq_ita.parquet
+  - sampling_unit_id: webfaq_jpn
+    language: jpn
+    shards:
+    - webfaq_jpn.parquet
+  - sampling_unit_id: webfaq_kat
+    language: kat
+    shards:
+    - webfaq_kat.parquet
+  - sampling_unit_id: webfaq_kaz
+    language: kaz
+    shards:
+    - webfaq_kaz.parquet
+  - sampling_unit_id: webfaq_kor
+    language: kor
+    shards:
+    - webfaq_kor.parquet
+  - sampling_unit_id: webfaq_lav
+    language: lav
+    shards:
+    - webfaq_lav.parquet
+  - sampling_unit_id: webfaq_lit
+    language: lit
+    shards:
+    - webfaq_lit.parquet
+  - sampling_unit_id: webfaq_mar
+    language: mar
+    shards:
+    - webfaq_mar.parquet
+  - sampling_unit_id: webfaq_msa
+    language: msa
+    shards:
+    - webfaq_msa.parquet
+  - sampling_unit_id: webfaq_nld
+    language: nld
+    shards:
+    - webfaq_nld.parquet
+  - sampling_unit_id: webfaq_nor
+    language: nor
+    shards:
+    - webfaq_nor.parquet
+  - sampling_unit_id: webfaq_pol
+    language: pol
+    shards:
+    - webfaq_pol.parquet
+  - sampling_unit_id: webfaq_por
+    language: por
+    shards:
+    - webfaq_por.parquet
+  - sampling_unit_id: webfaq_ron
+    language: ron
+    shards:
+    - webfaq_ron.parquet
+  - sampling_unit_id: webfaq_rus
+    language: rus
+    shards:
+    - webfaq_rus.parquet
+  - sampling_unit_id: webfaq_slk
+    language: slk
+    shards:
+    - webfaq_slk.parquet
+  - sampling_unit_id: webfaq_slv
+    language: slv
+    shards:
+    - webfaq_slv.parquet
+  - sampling_unit_id: webfaq_spa
+    language: spa
+    shards:
+    - webfaq_spa.parquet
+  - sampling_unit_id: webfaq_sqi
+    language: sqi
+    shards:
+    - webfaq_sqi.parquet
+  - sampling_unit_id: webfaq_srp
+    language: srp
+    shards:
+    - webfaq_srp.parquet
+  - sampling_unit_id: webfaq_swe
+    language: swe
+    shards:
+    - webfaq_swe.parquet
+  - sampling_unit_id: webfaq_tgl
+    language: tgl
+    shards:
+    - webfaq_tgl.parquet
+  - sampling_unit_id: webfaq_tha
+    language: tha
+    shards:
+    - webfaq_tha.parquet
+  - sampling_unit_id: webfaq_tur
+    language: tur
+    shards:
+    - webfaq_tur.parquet
+  - sampling_unit_id: webfaq_ukr
+    language: ukr
+    shards:
+    - webfaq_ukr.parquet
+  - sampling_unit_id: webfaq_urd
+    language: urd
+    shards:
+    - webfaq_urd.parquet
+  - sampling_unit_id: webfaq_uzb
+    language: uzb
+    shards:
+    - webfaq_uzb.parquet
+  - sampling_unit_id: webfaq_vie
+    language: vie
+    shards:
+    - webfaq_vie.parquet
+  - sampling_unit_id: webfaq_zho
+    language: zho
+    shards:
+    - webfaq_zho.parquet
+- source_id: mmarco
+  paper_name: mMARCO
+  paper_table: 8
+  paper_category: Question Answering
+  language: '14'
+  task_type: retrieval
+  paper_size: 5470174
+  sampling_units:
+  - sampling_unit_id: msmarco
+    language: en
+    shards:
+    - msmarco.parquet
+  - sampling_unit_id: mmarco_arabic
+    language: arabic
+    shards:
+    - mmarco_arabic.parquet
+  - sampling_unit_id: mmarco_chinese
+    language: chinese
+    shards:
+    - mmarco_chinese.parquet
+  - sampling_unit_id: mmarco_dutch
+    language: dutch
+    shards:
+    - mmarco_dutch.parquet
+  - sampling_unit_id: mmarco_french
+    language: french
+    shards:
+    - mmarco_french.parquet
+  - sampling_unit_id: mmarco_german
+    language: german
+    shards:
+    - mmarco_german.parquet
+  - sampling_unit_id: mmarco_hindi
+    language: hindi
+    shards:
+    - mmarco_hindi.parquet
+  - sampling_unit_id: mmarco_indonesian
+    language: indonesian
+    shards:
+    - mmarco_indonesian.parquet
+  - sampling_unit_id: mmarco_italian
+    language: italian
+    shards:
+    - mmarco_italian.parquet
+  - sampling_unit_id: mmarco_japanese
+    language: japanese
+    shards:
+    - mmarco_japanese.parquet
+  - sampling_unit_id: mmarco_portuguese
+    language: portuguese
+    shards:
+    - mmarco_portuguese.parquet
+  - sampling_unit_id: mmarco_russian
+    language: russian
+    shards:
+    - mmarco_russian.parquet
+  - sampling_unit_id: mmarco_spanish
+    language: spanish
+    shards:
+    - mmarco_spanish.parquet
+  - sampling_unit_id: mmarco_vietnamese
+    language: vietnamese
+    shards:
+    - mmarco_vietnamese.parquet
+- source_id: paq
+  paper_name: PAQ
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 938771
+  sampling_units:
+  - sampling_unit_id: paq
+    shards:
+    - paq.parquet
+    - paq_part2.parquet
+- source_id: squad
+  paper_name: SQuAD
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 89509
+  sampling_units:
+  - sampling_unit_id: squad
+    shards:
+    - squad.parquet
+- source_id: stack_exchange
+  paper_name: Stack Exchange
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 754705
+  sampling_units:
+  - sampling_unit_id: stack_exchange
+    shards:
+    - stackexchange.parquet
+    - stackexchange_part2.parquet
+- source_id: arguana
+  paper_name: Arguana
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 22848
+  sampling_units:
+  - sampling_unit_id: arguana
+    shards:
+    - arguana.parquet
+- source_id: natural_questions
+  paper_name: Natural Questions
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 97209
+  sampling_units:
+  - sampling_unit_id: natural_questions
+    shards:
+    - natural_questions.parquet
+- source_id: hotpotqa
+  paper_name: HotpotQA
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 120528
+  sampling_units:
+  - sampling_unit_id: hotpotqa
+    shards:
+    - hotpotqa.parquet
+- source_id: eli5
+  paper_name: ELI5
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 161345
+  sampling_units:
+  - sampling_unit_id: eli5
+    shards:
+    - eli5.parquet
+- source_id: fiqa2018
+  paper_name: FiQA2018
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 7452
+  sampling_units:
+  - sampling_unit_id: fiqa2018
+    shards:
+    - fiqa.parquet
+- source_id: bioasq
+  paper_name: BioASQ
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 125248
+  sampling_units:
+  - sampling_unit_id: bioasq
+    shards:
+    - bioasq.parquet
+- source_id: nfcorpus
+  paper_name: NFCorpus
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 1283
+  sampling_units:
+  - sampling_unit_id: nfcorpus
+    shards:
+    - nfcorpus.parquet
+- source_id: triviaqa
+  paper_name: TriviaQA
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 60025
+  sampling_units:
+  - sampling_unit_id: triviaqa
+    shards:
+    - triviaqa.parquet
+- source_id: pubmedqa
+  paper_name: PubMedQA
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 60227
+  sampling_units:
+  - sampling_unit_id: pubmedqa
+    shards:
+    - pubmedqa.parquet
+- source_id: amazon_qa
+  paper_name: Amazon QA
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 59340
+  sampling_units:
+  - sampling_unit_id: amazon_qa
+    shards:
+    - amazon_qa.parquet
+- source_id: miracl
+  paper_name: MIRACL
+  paper_table: 8
+  paper_category: Question Answering
+  language: '16'
+  task_type: retrieval
+  paper_size: 26740
+  sampling_units:
+  - sampling_unit_id: miracl_ar
+    language: ar
+    shards:
+    - miracl_ar.parquet
+  - sampling_unit_id: miracl_bn
+    language: bn
+    shards:
+    - miracl_bn.parquet
+  - sampling_unit_id: miracl_en
+    language: en
+    shards:
+    - miracl_en.parquet
+  - sampling_unit_id: miracl_es
+    language: es
+    shards:
+    - miracl_es.parquet
+  - sampling_unit_id: miracl_fa
+    language: fa
+    shards:
+    - miracl_fa.parquet
+  - sampling_unit_id: miracl_fi
+    language: fi
+    shards:
+    - miracl_fi.parquet
+  - sampling_unit_id: miracl_fr
+    language: fr
+    shards:
+    - miracl_fr.parquet
+  - sampling_unit_id: miracl_hi
+    language: hi
+    shards:
+    - miracl_hi.parquet
+  - sampling_unit_id: miracl_id
+    language: id
+    shards:
+    - miracl_id.parquet
+  - sampling_unit_id: miracl_ja
+    language: ja
+    shards:
+    - miracl_ja.parquet
+  - sampling_unit_id: miracl_ko
+    language: ko
+    shards:
+    - miracl_ko.parquet
+  - sampling_unit_id: miracl_ru
+    language: ru
+    shards:
+    - miracl_ru.parquet
+  - sampling_unit_id: miracl_sw
+    language: sw
+    shards:
+    - miracl_sw.parquet
+  - sampling_unit_id: miracl_te
+    language: te
+    shards:
+    - miracl_te.parquet
+  - sampling_unit_id: miracl_th
+    language: th
+    shards:
+    - miracl_th.parquet
+  - sampling_unit_id: miracl_zh
+    language: zh
+    shards:
+    - miracl_zh.parquet
+- source_id: mr_tydi
+  paper_name: Mr.TyDi
+  paper_table: 8
+  paper_category: Question Answering
+  language: '11'
+  task_type: retrieval
+  paper_size: 48619
+  sampling_units:
+  - sampling_unit_id: mrtidy
+    language: mrtidy
+    shards:
+    - mrtidy.parquet
+  - sampling_unit_id: mrtidy_arabic
+    language: arabic
+    shards:
+    - mrtidy_arabic.parquet
+  - sampling_unit_id: mrtidy_bengali
+    language: bengali
+    shards:
+    - mrtidy_bengali.parquet
+  - sampling_unit_id: mrtidy_finnish
+    language: finnish
+    shards:
+    - mrtidy_finnish.parquet
+  - sampling_unit_id: mrtidy_indonesian
+    language: indonesian
+    shards:
+    - mrtidy_indonesian.parquet
+  - sampling_unit_id: mrtidy_japanese
+    language: japanese
+    shards:
+    - mrtidy_japanese.parquet
+  - sampling_unit_id: mrtidy_korean
+    language: korean
+    shards:
+    - mrtidy_korean.parquet
+  - sampling_unit_id: mrtidy_russian
+    language: russian
+    shards:
+    - mrtidy_russian.parquet
+  - sampling_unit_id: mrtidy_swahili
+    language: swahili
+    shards:
+    - mrtidy_swahili.parquet
+  - sampling_unit_id: mrtidy_telugu
+    language: telugu
+    shards:
+    - mrtidy_telugu.parquet
+  - sampling_unit_id: mrtidy_thai
+    language: thai
+    shards:
+    - mrtidy_thai.parquet
+- source_id: mldr
+  paper_name: MLDR
+  paper_table: 8
+  paper_category: Question Answering
+  language: '13'
+  task_type: retrieval
+  paper_size: 40264
+  sampling_units:
+  - sampling_unit_id: mldr_ar
+    language: ar
+    shards:
+    - mldr_ar.parquet
+  - sampling_unit_id: mldr_de
+    language: de
+    shards:
+    - mldr_de.parquet
+  - sampling_unit_id: mldr_en
+    language: en
+    shards:
+    - mldr_en.parquet
+  - sampling_unit_id: mldr_es
+    language: es
+    shards:
+    - mldr_es.parquet
+  - sampling_unit_id: mldr_fr
+    language: fr
+    shards:
+    - mldr_fr.parquet
+  - sampling_unit_id: mldr_hi
+    language: hi
+    shards:
+    - mldr_hi.parquet
+  - sampling_unit_id: mldr_it
+    language: it
+    shards:
+    - mldr_it.parquet
+  - sampling_unit_id: mldr_ja
+    language: ja
+    shards:
+    - mldr_ja.parquet
+  - sampling_unit_id: mldr_ko
+    language: ko
+    shards:
+    - mldr_ko.parquet
+  - sampling_unit_id: mldr_pt
+    language: pt
+    shards:
+    - mldr_pt.parquet
+  - sampling_unit_id: mldr_ru
+    language: ru
+    shards:
+    - mldr_ru.parquet
+  - sampling_unit_id: mldr_th
+    language: th
+    shards:
+    - mldr_th.parquet
+  - sampling_unit_id: mldr_zh
+    language: zh
+    shards:
+    - mldr_zh.parquet
+- source_id: mkqa
+  paper_name: MKQA
+  paper_table: 8
+  paper_category: Question Answering
+  language: '26'
+  task_type: retrieval
+  paper_size: 69287
+  sampling_units:
+  - sampling_unit_id: mkqa_ar
+    language: ar
+    shards:
+    - mkqa_ar.parquet
+  - sampling_unit_id: mkqa_da
+    language: da
+    shards:
+    - mkqa_da.parquet
+  - sampling_unit_id: mkqa_de
+    language: de
+    shards:
+    - mkqa_de.parquet
+  - sampling_unit_id: mkqa_en
+    language: en
+    shards:
+    - mkqa_en.parquet
+  - sampling_unit_id: mkqa_es
+    language: es
+    shards:
+    - mkqa_es.parquet
+  - sampling_unit_id: mkqa_fi
+    language: fi
+    shards:
+    - mkqa_fi.parquet
+  - sampling_unit_id: mkqa_fr
+    language: fr
+    shards:
+    - mkqa_fr.parquet
+  - sampling_unit_id: mkqa_he
+    language: he
+    shards:
+    - mkqa_he.parquet
+  - sampling_unit_id: mkqa_hu
+    language: hu
+    shards:
+    - mkqa_hu.parquet
+  - sampling_unit_id: mkqa_it
+    language: it
+    shards:
+    - mkqa_it.parquet
+  - sampling_unit_id: mkqa_ja
+    language: ja
+    shards:
+    - mkqa_ja.parquet
+  - sampling_unit_id: mkqa_km
+    language: km
+    shards:
+    - mkqa_km.parquet
+  - sampling_unit_id: mkqa_ko
+    language: ko
+    shards:
+    - mkqa_ko.parquet
+  - sampling_unit_id: mkqa_ms
+    language: ms
+    shards:
+    - mkqa_ms.parquet
+  - sampling_unit_id: mkqa_nl
+    language: nl
+    shards:
+    - mkqa_nl.parquet
+  - sampling_unit_id: mkqa_no
+    language: 'no'
+    shards:
+    - mkqa_no.parquet
+  - sampling_unit_id: mkqa_pl
+    language: pl
+    shards:
+    - mkqa_pl.parquet
+  - sampling_unit_id: mkqa_pt
+    language: pt
+    shards:
+    - mkqa_pt.parquet
+  - sampling_unit_id: mkqa_ru
+    language: ru
+    shards:
+    - mkqa_ru.parquet
+  - sampling_unit_id: mkqa_sv
+    language: sv
+    shards:
+    - mkqa_sv.parquet
+  - sampling_unit_id: mkqa_th
+    language: th
+    shards:
+    - mkqa_th.parquet
+  - sampling_unit_id: mkqa_tr
+    language: tr
+    shards:
+    - mkqa_tr.parquet
+  - sampling_unit_id: mkqa_vi
+    language: vi
+    shards:
+    - mkqa_vi.parquet
+  - sampling_unit_id: mkqa_zh_cn
+    language: cn
+    shards:
+    - mkqa_zh_cn.parquet
+  - sampling_unit_id: mkqa_zh_hk
+    language: hk
+    shards:
+    - mkqa_zh_hk.parquet
+  - sampling_unit_id: mkqa_zh_tw
+    language: tw
+    shards:
+    - mkqa_zh_tw.parquet
+- source_id: stackoverflowqa
+  paper_name: StackOverflowQA
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 13820
+  sampling_units:
+  - sampling_unit_id: stackoverflowqa
+    shards:
+    - stackoverflow_qa.parquet
+- source_id: procqa
+  paper_name: ProCQA
+  paper_table: 8
+  paper_category: Question Answering
+  language: '11'
+  task_type: retrieval
+  paper_size: 485780
+  sampling_units:
+  - sampling_unit_id: procqa
+    shards:
+    - procqa.parquet
+- source_id: yahoo_answers
+  paper_name: Yahoo_Answers
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 196645
+  sampling_units:
+  - sampling_unit_id: yahoo_answers
+    shards:
+    - yahoo_answers.parquet
+- source_id: gooaq
+  paper_name: GooAQ
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 473876
+  sampling_units:
+  - sampling_unit_id: gooaq
+    shards:
+    - gooaq.parquet
+- source_id: t2ranking
+  paper_name: T2Ranking
+  paper_table: 8
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 85521
+  sampling_units:
+  - sampling_unit_id: t2ranking
+    shards:
+    - t2ranking.parquet
+- source_id: dureader
+  paper_name: DuReader
+  paper_table: 8
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 78023
+  sampling_units:
+  - sampling_unit_id: dureader
+    shards:
+    - dureader.parquet
+- source_id: cmedqav2
+  paper_name: cMedQAv2
+  paper_table: 8
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 23105
+  sampling_units:
+  - sampling_unit_id: cmedqav2
+    shards:
+    - cmedqav2.parquet
+- source_id: huatuo_kgqa
+  paper_name: Huatuo_kgqa
+  paper_table: 8
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 53835
+  sampling_units:
+  - sampling_unit_id: huatuo_kgqa
+    shards:
+    - huatuo_kgqa.parquet
+- source_id: huatuo_encqa
+  paper_name: Huatuo_encqa
+  paper_table: 8
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 253523
+  sampling_units:
+  - sampling_unit_id: huatuo_encqa
+    shards:
+    - huatuo_encqa.parquet
+- source_id: multi_cpr_medical
+  paper_name: Multi CPR Medical
+  paper_table: 8
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 62085
+  sampling_units:
+  - sampling_unit_id: multi_cpr_medical
+    shards:
+    - multicpr_medical.parquet
+- source_id: healthcaremagic
+  paper_name: HealthCareMagic
+  paper_table: 8
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 78626
+  sampling_units:
+  - sampling_unit_id: healthcaremagic
+    shards:
+    - healthcaremagic.parquet
+- source_id: medicalqa_ru
+  paper_name: MedicalQA_ru
+  paper_table: 8
+  paper_category: Question Answering
+  language: ru
+  task_type: retrieval
+  paper_size: 71932
+  sampling_units:
+  - sampling_unit_id: medicalqa_ru
+    shards:
+    - medicalqa_ru.parquet
+- source_id: aya
+  paper_name: Aya
+  paper_table: 8
+  paper_category: Instruction Data
+  language: '65'
+  task_type: retrieval
+  paper_size: 126965
+  sampling_units:
+  - sampling_unit_id: aya
+    shards:
+    - aya.parquet
+- source_id: muri
+  paper_name: MURI
+  paper_table: 8
+  paper_category: Instruction Data
+  language: '194'
+  task_type: retrieval
+  paper_size: 720782
+  sampling_units:
+  - sampling_unit_id: muri
+    shards:
+    - muri.parquet
+    - muri_part2.parquet
+- source_id: oasst2
+  paper_name: OASST2
+  paper_table: 8
+  paper_category: Instruction Data
+  language: '26'
+  task_type: retrieval
+  paper_size: 12449
+  sampling_units:
+  - sampling_unit_id: oasst2
+    shards:
+    - oasst2.parquet
+- source_id: multialpaca
+  paper_name: MultiAlpaca
+  paper_table: 8
+  paper_category: Instruction Data
+  language: '11'
+  task_type: retrieval
+  paper_size: 125447
+  sampling_units:
+  - sampling_unit_id: multialpaca
+    shards:
+    - multialpaca.parquet
+- source_id: wildchat
+  paper_name: WildChat
+  paper_table: 8
+  paper_category: Instruction Data
+  language: '76'
+  task_type: retrieval
+  paper_size: 638781
+  sampling_units:
+  - sampling_unit_id: wildchat
+    shards:
+    - wildchat.parquet
+    - wildchat_part2.parquet
+    - wildchat_part3.parquet
+- source_id: m2lingual
+  paper_name: M2Lingual
+  paper_table: 8
+  paper_category: Instruction Data
+  language: '75'
+  task_type: retrieval
+  paper_size: 158251
+  sampling_units:
+  - sampling_unit_id: m2lingual
+    shards:
+    - m2lingual.parquet
+- source_id: natural_reasoning
+  paper_name: Natural Reasoning
+  paper_table: 8
+  paper_category: Instruction Data
+  language: en
+  task_type: retrieval
+  paper_size: 845682
+  sampling_units:
+  - sampling_unit_id: natural_reasoning
+    shards:
+    - natural_reasoning.parquet
+    - natural_reasoning_part2.parquet
+- source_id: infinity_instruct
+  paper_name: Infinity Instruct
+  paper_table: 8
+  paper_category: Instruction Data
+  language: en, zh
+  task_type: retrieval
+  paper_size: 757439
+  sampling_units:
+  - sampling_unit_id: infinity_instruct
+    shards:
+    - infinstruct.parquet
+    - infinstruct_part2.parquet
+- source_id: coig
+  paper_name: COIG
+  paper_table: 8
+  paper_category: Instruction Data
+  language: zh
+  task_type: retrieval
+  paper_size: 42415
+  sampling_units:
+  - sampling_unit_id: coig
+    shards:
+    - coig.parquet
+- source_id: medinstruct
+  paper_name: Medinstruct
+  paper_table: 8
+  paper_category: Instruction Data
+  language: en
+  task_type: retrieval
+  paper_size: 51539
+  sampling_units:
+  - sampling_unit_id: medinstruct
+    shards:
+    - medinstruct.parquet
+- source_id: codefeedbackst
+  paper_name: CodeFeedbackST
+  paper_table: 8
+  paper_category: Instruction Data
+  language: '137'
+  task_type: retrieval
+  paper_size: 115971
+  sampling_units:
+  - sampling_unit_id: codefeedbackst
+    shards:
+    - codefeedback_st.parquet
+- source_id: codefeedbackmt
+  paper_name: CodeFeedbackMT
+  paper_table: 8
+  paper_category: Instruction Data
+  language: python
+  task_type: retrieval
+  paper_size: 52221
+  sampling_units:
+  - sampling_unit_id: codefeedbackmt
+    shards:
+    - codefeedback_mt.parquet
+- source_id: openorca
+  paper_name: OpenOrca
+  paper_table: 8
+  paper_category: Instruction Data
+  language: en
+  task_type: retrieval
+  paper_size: 896450
+  sampling_units:
+  - sampling_unit_id: openorca
+    shards:
+    - openorca.parquet
+    - openorca_part2.parquet
+- source_id: medi2
+  paper_name: MEDI2
+  paper_table: 8
+  paper_category: Instruction Data
+  language: en
+  task_type: retrieval
+  paper_size: 668036
+  sampling_units:
+  - sampling_unit_id: medi2
+    shards:
+    - medi2.parquet
+    - medi2_part2.parquet
+- source_id: medicalinstruction
+  paper_name: MedicalInstruction
+  paper_table: 8
+  paper_category: Instruction Data
+  language: en
+  task_type: retrieval
+  paper_size: 75268
+  sampling_units:
+  - sampling_unit_id: medicalinstruction
+    shards:
+    - medical_instruction.parquet
+- source_id: s2orc_title_abstract
+  paper_name: S2ORC-Title-Abstract
+  paper_table: 8
+  paper_category: Title Matching
+  language: en
+  task_type: retrieval
+  paper_size: 250000
+  sampling_units:
+  - sampling_unit_id: s2orc_title_abstract
+    shards:
+    - s2orc_title_abstract.parquet
+- source_id: cord_19
+  paper_name: CORD 19
+  paper_table: 8
+  paper_category: Title Matching
+  language: en
+  task_type: retrieval
+  paper_size: 373674
+  sampling_units:
+  - sampling_unit_id: cord_19
+    shards:
+    - cord19.parquet
+- source_id: multi_cpr_ecom
+  paper_name: Multi CPR ECom
+  paper_table: 8
+  paper_category: Title Matching
+  language: zh
+  task_type: retrieval
+  paper_size: 90850
+  sampling_units:
+  - sampling_unit_id: multi_cpr_ecom
+    shards:
+    - multicpr_ecom.parquet
+- source_id: esci
+  paper_name: ESCI
+  paper_table: 8
+  paper_category: Title Matching
+  language: en, ja, es
+  task_type: retrieval
+  paper_size: 80468
+  sampling_units:
+  - sampling_unit_id: esci
+    shards:
+    - esci.parquet
+- source_id: clirmatrix
+  paper_name: CLIRMatrix
+  paper_table: 8
+  paper_category: Title Matching
+  language: '137'
+  task_type: retrieval
+  paper_size: 3275561
+  sampling_units:
+  - sampling_unit_id: clirmatrix_af_bg
+    language: af-bg
+    shards:
+    - clirmatrix_af-bg.parquet
+  - sampling_unit_id: clirmatrix_ar_fr
+    language: ar-fr
+    shards:
+    - clirmatrix_ar-fr.parquet
+  - sampling_unit_id: clirmatrix_bn_cs
+    language: bn-cs
+    shards:
+    - clirmatrix_bn-cs.parquet
+  - sampling_unit_id: clirmatrix_cv_fa
+    language: cv-fa
+    shards:
+    - clirmatrix_cv-fa.parquet
+  - sampling_unit_id: clirmatrix_en
+    language: en
+    shards:
+    - clirmatrix_en.parquet
+  - sampling_unit_id: clirmatrix_es_pt
+    language: es-pt
+    shards:
+    - clirmatrix_es-pt.parquet
+  - sampling_unit_id: clirmatrix_fi_ht
+    language: fi-ht
+    shards:
+    - clirmatrix_fi-ht.parquet
+  - sampling_unit_id: clirmatrix_hu_ko
+    language: hu-ko
+    shards:
+    - clirmatrix_hu-ko.parquet
+  - sampling_unit_id: clirmatrix_ja_de
+    language: ja-de
+    shards:
+    - clirmatrix_ja-de.parquet
+  - sampling_unit_id: clirmatrix_ku_mk
+    language: ku-mk
+    shards:
+    - clirmatrix_ku-mk.parquet
+  - sampling_unit_id: clirmatrix_ml_nl
+    language: ml-nl
+    shards:
+    - clirmatrix_ml-nl.parquet
+  - sampling_unit_id: clirmatrix_nn_pms
+    language: nn-pms
+    shards:
+    - clirmatrix_nn-pms.parquet
+  - sampling_unit_id: clirmatrix_pnb_sk
+    language: pnb-sk
+    shards:
+    - clirmatrix_pnb-sk.parquet
+  - sampling_unit_id: clirmatrix_ru_it
+    language: ru-it
+    shards:
+    - clirmatrix_ru-it.parquet
+  - sampling_unit_id: clirmatrix_sl_tg
+    language: sl-tg
+    shards:
+    - clirmatrix_sl-tg.parquet
+  - sampling_unit_id: clirmatrix_th_uk
+    language: th-uk
+    shards:
+    - clirmatrix_th-uk.parquet
+  - sampling_unit_id: clirmatrix_ur_yo
+    language: ur-yo
+    shards:
+    - clirmatrix_ur-yo.parquet
+  - sampling_unit_id: clirmatrix_zh
+    language: zh
+    shards:
+    - clirmatrix_zh.parquet
+- source_id: snli
+  paper_name: SNLI
+  paper_table: 8
+  paper_category: NLI
+  language: en
+  task_type: retrieval
+  paper_size: 54585
+  sampling_units:
+  - sampling_unit_id: snli
+    shards:
+    - snli.parquet
+- source_id: mnli
+  paper_name: MNLI
+  paper_table: 8
+  paper_category: NLI
+  language: en
+  task_type: retrieval
+  paper_size: 112075
+  sampling_units:
+  - sampling_unit_id: mnli
+    shards:
+    - mnli.parquet
+- source_id: anli
+  paper_name: ANLI
+  paper_table: 8
+  paper_category: NLI
+  language: en
+  task_type: retrieval
+  paper_size: 18801
+  sampling_units:
+  - sampling_unit_id: anli
+    shards:
+    - anli.parquet
+- source_id: xnli
+  paper_name: XNLI
+  paper_table: 8
+  paper_category: NLI
+  language: '14'
+  task_type: retrieval
+  paper_size: 1400600
+  sampling_units:
+  - sampling_unit_id: xnli_ar
+    language: ar
+    shards:
+    - xnli_ar.parquet
+  - sampling_unit_id: xnli_bg
+    language: bg
+    shards:
+    - xnli_bg.parquet
+  - sampling_unit_id: xnli_de
+    language: de
+    shards:
+    - xnli_de.parquet
+  - sampling_unit_id: xnli_el
+    language: el
+    shards:
+    - xnli_el.parquet
+  - sampling_unit_id: xnli_es
+    language: es
+    shards:
+    - xnli_es.parquet
+  - sampling_unit_id: xnli_fr
+    language: fr
+    shards:
+    - xnli_fr.parquet
+  - sampling_unit_id: xnli_hi
+    language: hi
+    shards:
+    - xnli_hi.parquet
+  - sampling_unit_id: xnli_ru
+    language: ru
+    shards:
+    - xnli_ru.parquet
+  - sampling_unit_id: xnli_sw
+    language: sw
+    shards:
+    - xnli_sw.parquet
+  - sampling_unit_id: xnli_th
+    language: th
+    shards:
+    - xnli_th.parquet
+  - sampling_unit_id: xnli_tr
+    language: tr
+    shards:
+    - xnli_tr.parquet
+  - sampling_unit_id: xnli_ur
+    language: ur
+    shards:
+    - xnli_ur.parquet
+  - sampling_unit_id: xnli_vi
+    language: vi
+    shards:
+    - xnli_vi.parquet
+  - sampling_unit_id: xnli_zh
+    language: zh
+    shards:
+    - xnli_zh.parquet
+- source_id: ocnli
+  paper_name: OCNLI
+  paper_table: 8
+  paper_category: NLI
+  language: zh
+  task_type: retrieval
+  paper_size: 6616
+  sampling_units:
+  - sampling_unit_id: ocnli
+    shards:
+    - ocnli.parquet
+- source_id: xcodeeval_code2code
+  paper_name: xCodeEval Code2Code
+  paper_table: 8
+  paper_category: Code-to-Code
+  language: '17'
+  task_type: retrieval
+  paper_size: 37056
+  sampling_units:
+  - sampling_unit_id: xcodeeval_code2code_ccsharp
+    language: C%23
+    shards:
+    - xcodeeval_code2code_C%23.parquet
+  - sampling_unit_id: xcodeeval_code2code_ccpp
+    language: C++
+    shards:
+    - xcodeeval_code2code_C++.parquet
+  - sampling_unit_id: xcodeeval_code2code_c
+    language: C
+    shards:
+    - xcodeeval_code2code_C.parquet
+  - sampling_unit_id: xcodeeval_code2code_d
+    language: D
+    shards:
+    - xcodeeval_code2code_D.parquet
+  - sampling_unit_id: xcodeeval_code2code_go
+    language: Go
+    shards:
+    - xcodeeval_code2code_Go.parquet
+  - sampling_unit_id: xcodeeval_code2code_haskell
+    language: Haskell
+    shards:
+    - xcodeeval_code2code_Haskell.parquet
+  - sampling_unit_id: xcodeeval_code2code_java
+    language: Java
+    shards:
+    - xcodeeval_code2code_Java.parquet
+  - sampling_unit_id: xcodeeval_code2code_javascript
+    language: Javascript
+    shards:
+    - xcodeeval_code2code_Javascript.parquet
+  - sampling_unit_id: xcodeeval_code2code_kotlin
+    language: Kotlin
+    shards:
+    - xcodeeval_code2code_Kotlin.parquet
+  - sampling_unit_id: xcodeeval_code2code_ocaml
+    language: Ocaml
+    shards:
+    - xcodeeval_code2code_Ocaml.parquet
+  - sampling_unit_id: xcodeeval_code2code_php
+    language: PHP
+    shards:
+    - xcodeeval_code2code_PHP.parquet
+  - sampling_unit_id: xcodeeval_code2code_pascal
+    language: Pascal
+    shards:
+    - xcodeeval_code2code_Pascal.parquet
+  - sampling_unit_id: xcodeeval_code2code_perl
+    language: Perl
+    shards:
+    - xcodeeval_code2code_Perl.parquet
+  - sampling_unit_id: xcodeeval_code2code_python
+    language: Python
+    shards:
+    - xcodeeval_code2code_Python.parquet
+  - sampling_unit_id: xcodeeval_code2code_ruby
+    language: Ruby
+    shards:
+    - xcodeeval_code2code_Ruby.parquet
+  - sampling_unit_id: xcodeeval_code2code_rust
+    language: Rust
+    shards:
+    - xcodeeval_code2code_Rust.parquet
+  - sampling_unit_id: xcodeeval_code2code_scala
+    language: Scala
+    shards:
+    - xcodeeval_code2code_Scala.parquet
+- source_id: xcodeeval_translation
+  paper_name: xCodeEval Translation
+  paper_table: 8
+  paper_category: Code-to-Code
+  language: '11'
+  task_type: clustering
+  paper_size: 500000
+  sampling_units:
+  - sampling_unit_id: xcodeeval_translation
+    shards:
+    - xcodeeval_translation.parquet
+- source_id: codesearchnet_ccr
+  paper_name: CodeSearchNet-ccr
+  paper_table: 8
+  paper_category: Code-to-Code
+  language: '6'
+  task_type: retrieval
+  paper_size: 905195
+  sampling_units:
+  - sampling_unit_id: csn_ccr_go
+    language: go
+    shards:
+    - csn_ccr_go.parquet
+  - sampling_unit_id: csn_ccr_java
+    language: java
+    shards:
+    - csn_ccr_java.parquet
+  - sampling_unit_id: csn_ccr_javascript
+    language: javascript
+    shards:
+    - csn_ccr_javascript.parquet
+  - sampling_unit_id: csn_ccr_php
+    language: php
+    shards:
+    - csn_ccr_php.parquet
+  - sampling_unit_id: csn_ccr_python
+    language: python
+    shards:
+    - csn_ccr_python.parquet
+  - sampling_unit_id: csn_ccr_ruby
+    language: ruby
+    shards:
+    - csn_ccr_ruby.parquet
+- source_id: arxiv_clustering_p2p
+  paper_name: Arxiv Clustering P2P
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 83476
+  sampling_units:
+  - sampling_unit_id: arxiv_clustering_p2p
+    shards:
+    - arxiv_clustering_p2p.parquet
+- source_id: arxiv_clustering_s2s
+  paper_name: Arxiv Clustering S2S
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 83486
+  sampling_units:
+  - sampling_unit_id: arxiv_clustering_s2s
+    shards:
+    - arxiv_clustering_s2s.parquet
+- source_id: biorxiv_clustering_p2p
+  paper_name: Biorxiv Clustering P2P
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 57296
+  sampling_units:
+  - sampling_unit_id: biorxiv_clustering_p2p
+    shards:
+    - biorxiv_clustering_p2p.parquet
+- source_id: biorxiv_clustering_s2s
+  paper_name: Biorxiv Clustering S2S
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 57296
+  sampling_units:
+  - sampling_unit_id: biorxiv_clustering_s2s
+    shards:
+    - biorxiv_clustering_s2s.parquet
+- source_id: medrxiv_clustering_p2p
+  paper_name: Medrxiv Clustering P2P
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 18659
+  sampling_units:
+  - sampling_unit_id: medrxiv_clustering_p2p
+    shards:
+    - medrxiv_clustering_p2p.parquet
+- source_id: medrxiv_clustering_s2s
+  paper_name: Medrxiv Clustering S2S
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 18659
+  sampling_units:
+  - sampling_unit_id: medrxiv_clustering_s2s
+    shards:
+    - medrxiv_clustering_s2s.parquet
+- source_id: mlsum_clustering
+  paper_name: MLSUM Clustering
+  paper_table: 9
+  paper_category: Topic Classification
+  language: de, es, fr, ru
+  task_type: clustering
+  paper_size: 325739
+  sampling_units:
+  - sampling_unit_id: mlsum_clustering_de
+    language: de
+    shards:
+    - mlsum_clustering_de.parquet
+  - sampling_unit_id: mlsum_clustering_es
+    language: es
+    shards:
+    - mlsum_clustering_es.parquet
+  - sampling_unit_id: mlsum_clustering_fr
+    language: fr
+    shards:
+    - mlsum_clustering_fr.parquet
+  - sampling_unit_id: mlsum_clustering_ru
+    language: ru
+    shards:
+    - mlsum_clustering_ru.parquet
+- source_id: twentynewsgroups
+  paper_name: TwentyNewsgroups
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 11060
+  sampling_units:
+  - sampling_unit_id: twentynewsgroups
+    shards:
+    - twentynewsgroups.parquet
+- source_id: sib200
+  paper_name: SIB200ClusteringS2S
+  paper_table: 9
+  paper_category: Topic Classification
+  language: '205'
+  task_type: clustering
+  paper_size: 163302
+  sampling_units:
+  - sampling_unit_id: sib200
+    shards:
+    - sib200.parquet
+- source_id: reddit_clustering_p2p
+  paper_name: Reddit Clustering P2P
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 80000
+  sampling_units:
+  - sampling_unit_id: reddit_clustering_p2p
+    shards:
+    - reddit_clustering_p2p.parquet
+- source_id: reddit_clustering_s2s
+  paper_name: Reddit Clustering S2S
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 58141
+  sampling_units:
+  - sampling_unit_id: reddit_clustering_s2s
+    shards:
+    - reddit_clustering_s2s.parquet
+- source_id: stack_exchange_clustering_p2p
+  paper_name: Stack Exchange Clustering P2P
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 80000
+  sampling_units:
+  - sampling_unit_id: stack_exchange_clustering_p2p
+    shards:
+    - stackexchange_clustering_p2p.parquet
+- source_id: stack_exchange_clustering_s2s
+  paper_name: Stack Exchange Clustering S2S
+  paper_table: 9
+  paper_category: Topic Classification
+  language: en
+  task_type: clustering
+  paper_size: 56731
+  sampling_units:
+  - sampling_unit_id: stack_exchange_clustering_s2s
+    shards:
+    - stackexchange_clustering_s2s.parquet
+- source_id: thucnews
+  paper_name: THUCNews
+  paper_table: 9
+  paper_category: Topic Classification
+  language: zh
+  task_type: clustering
+  paper_size: 100000
+  sampling_units:
+  - sampling_unit_id: thucnews
+    shards:
+    - thucnews.parquet
+- source_id: tnews
+  paper_name: TNews
+  paper_table: 9
+  paper_category: Topic Classification
+  language: zh
+  task_type: clustering
+  paper_size: 49726
+  sampling_units:
+  - sampling_unit_id: tnews
+    shards:
+    - tnews.parquet
+- source_id: csl
+  paper_name: CSL
+  paper_table: 9
+  paper_category: Topic Classification
+  language: zh
+  task_type: clustering
+  paper_size: 100000
+  sampling_units:
+  - sampling_unit_id: csl
+    shards:
+    - csl.parquet
+- source_id: xsum
+  paper_name: XSum
+  paper_table: 9
+  paper_category: Summarization
+  language: en
+  task_type: retrieval
+  paper_size: 184383
+  sampling_units:
+  - sampling_unit_id: xsum
+    shards:
+    - xsum.parquet
+- source_id: cnn_dm
+  paper_name: CNN_DM
+  paper_table: 9
+  paper_category: Summarization
+  language: en
+  task_type: retrieval
+  paper_size: 100000
+  sampling_units:
+  - sampling_unit_id: cnn_dm
+    shards:
+    - cnn_dm.parquet
+- source_id: mlsum_retrieval
+  paper_name: MLSUM Retreival
+  paper_table: 9
+  paper_category: Summarization
+  language: '5'
+  task_type: retrieval
+  paper_size: 801159
+  sampling_units:
+  - sampling_unit_id: mlsum_retrieval_de
+    language: de
+    shards:
+    - mlsum_retrieval_de.parquet
+  - sampling_unit_id: mlsum_retrieval_es
+    language: es
+    shards:
+    - mlsum_retrieval_es.parquet
+  - sampling_unit_id: mlsum_retrieval_fr
+    language: fr
+    shards:
+    - mlsum_retrieval_fr.parquet
+  - sampling_unit_id: mlsum_retrieval_ru
+    language: ru
+    shards:
+    - mlsum_retrieval_ru.parquet
+  - sampling_unit_id: mlsum_retrieval_tr
+    language: tr
+    shards:
+    - mlsum_retrieval_tr.parquet
+- source_id: sentence_compression
+  paper_name: Sentence Compression
+  paper_table: 9
+  paper_category: Summarization
+  language: en
+  task_type: retrieval
+  paper_size: 175477
+  sampling_units:
+  - sampling_unit_id: sentence_compression
+    shards:
+    - sentence_compression.parquet
+- source_id: ocgi
+  paper_name: OCGI
+  paper_table: 9
+  paper_category: Text-to-Code
+  language: python
+  task_type: retrieval
+  paper_size: 1052849
+  sampling_units:
+  - sampling_unit_id: ocgi
+    shards:
+    - ocgi.parquet
+    - ocgi_part2.parquet
+- source_id: opencodereasoning_2
+  paper_name: OpenCodeReasoning-2
+  paper_table: 9
+  paper_category: Text-to-Code
+  language: python, cpp
+  task_type: retrieval
+  paper_size: 16632
+  sampling_units:
+  - sampling_unit_id: ocr2_cpp
+    language: cpp
+    shards:
+    - ocr2_cpp.parquet
+  - sampling_unit_id: ocr2_python
+    language: python
+    shards:
+    - ocr2_python.parquet
+- source_id: xcodeeval_nl2code
+  paper_name: xCodeEval NL2Code
+  paper_table: 9
+  paper_category: Text-to-Code
+  language: '17'
+  task_type: retrieval
+  paper_size: 51072
+  sampling_units:
+  - sampling_unit_id: xcodeeval_nl2code_ccsharp
+    language: C%23
+    shards:
+    - xcodeeval_nl2code_C%23.parquet
+  - sampling_unit_id: xcodeeval_nl2code_ccpp
+    language: C++
+    shards:
+    - xcodeeval_nl2code_C++.parquet
+  - sampling_unit_id: xcodeeval_nl2code_c
+    language: C
+    shards:
+    - xcodeeval_nl2code_C.parquet
+  - sampling_unit_id: xcodeeval_nl2code_d
+    language: D
+    shards:
+    - xcodeeval_nl2code_D.parquet
+  - sampling_unit_id: xcodeeval_nl2code_go
+    language: Go
+    shards:
+    - xcodeeval_nl2code_Go.parquet
+  - sampling_unit_id: xcodeeval_nl2code_haskell
+    language: Haskell
+    shards:
+    - xcodeeval_nl2code_Haskell.parquet
+  - sampling_unit_id: xcodeeval_nl2code_java
+    language: Java
+    shards:
+    - xcodeeval_nl2code_Java.parquet
+  - sampling_unit_id: xcodeeval_nl2code_javascript
+    language: Javascript
+    shards:
+    - xcodeeval_nl2code_Javascript.parquet
+  - sampling_unit_id: xcodeeval_nl2code_kotlin
+    language: Kotlin
+    shards:
+    - xcodeeval_nl2code_Kotlin.parquet
+  - sampling_unit_id: xcodeeval_nl2code_ocaml
+    language: Ocaml
+    shards:
+    - xcodeeval_nl2code_Ocaml.parquet
+  - sampling_unit_id: xcodeeval_nl2code_php
+    language: PHP
+    shards:
+    - xcodeeval_nl2code_PHP.parquet
+  - sampling_unit_id: xcodeeval_nl2code_pascal
+    language: Pascal
+    shards:
+    - xcodeeval_nl2code_Pascal.parquet
+  - sampling_unit_id: xcodeeval_nl2code_perl
+    language: Perl
+    shards:
+    - xcodeeval_nl2code_Perl.parquet
+  - sampling_unit_id: xcodeeval_nl2code_python
+    language: Python
+    shards:
+    - xcodeeval_nl2code_Python.parquet
+  - sampling_unit_id: xcodeeval_nl2code_ruby
+    language: Ruby
+    shards:
+    - xcodeeval_nl2code_Ruby.parquet
+  - sampling_unit_id: xcodeeval_nl2code_rust
+    language: Rust
+    shards:
+    - xcodeeval_nl2code_Rust.parquet
+  - sampling_unit_id: xcodeeval_nl2code_scala
+    language: Scala
+    shards:
+    - xcodeeval_nl2code_Scala.parquet
+- source_id: cosqa
+  paper_name: CosQA
+  paper_table: 9
+  paper_category: Text-to-Code
+  language: python
+  task_type: retrieval
+  paper_size: 9409
+  sampling_units:
+  - sampling_unit_id: cosqa
+    shards:
+    - cosqa.parquet
+- source_id: synthetictext2sql
+  paper_name: SyntheticText2SQL
+  paper_table: 9
+  paper_category: Text-to-Code
+  language: sql
+  task_type: retrieval
+  paper_size: 99617
+  sampling_units:
+  - sampling_unit_id: synthetictext2sql
+    shards:
+    - synthetic_text2sql.parquet
+- source_id: codesearchnet
+  paper_name: CodeSearchNet
+  paper_table: 9
+  paper_category: Code-to-Text
+  language: '6'
+  task_type: retrieval
+  paper_size: 936813
+  sampling_units:
+  - sampling_unit_id: csn_go
+    language: go
+    shards:
+    - csn_go.parquet
+  - sampling_unit_id: csn_java
+    language: java
+    shards:
+    - csn_java.parquet
+  - sampling_unit_id: csn_javascript
+    language: javascript
+    shards:
+    - csn_javascript.parquet
+  - sampling_unit_id: csn_php
+    language: php
+    shards:
+    - csn_php.parquet
+  - sampling_unit_id: csn_python
+    language: python
+    shards:
+    - csn_python.parquet
+  - sampling_unit_id: csn_ruby
+    language: ruby
+    shards:
+    - csn_ruby.parquet
+- source_id: stackexchangedupquestions_s2s
+  paper_name: StackExchangeDupQuestions-S2S
+  paper_table: 9
+  paper_category: Paraphrase Detection
+  language: en
+  task_type: retrieval
+  paper_size: 183559
+  sampling_units:
+  - sampling_unit_id: stackexchangedupquestions_s2s
+    shards:
+    - stackexchangedupquestions_s2s.parquet
+- source_id: stackexchangedupquestions_p2p
+  paper_name: StackExchangeDupQuestions-P2P
+  paper_table: 9
+  paper_category: Paraphrase Detection
+  language: en
+  task_type: retrieval
+  paper_size: 203060
+  sampling_units:
+  - sampling_unit_id: stackexchangedupquestions_p2p
+    shards:
+    - stackexchangedupquestions_p2p.parquet
+- source_id: qqp
+  paper_name: QQP
+  paper_table: 9
+  paper_category: Paraphrase Detection
+  language: en
+  task_type: retrieval
+  paper_size: 243598
+  sampling_units:
+  - sampling_unit_id: qqp
+    shards:
+    - qqp.parquet
+- source_id: stackoverflowdupquestions
+  paper_name: StackOverflowDupQuestions
+  paper_table: 9
+  paper_category: Paraphrase Detection
+  language: en
+  task_type: retrieval
+  paper_size: 19847
+  sampling_units:
+  - sampling_unit_id: stackoverflowdupquestions
+    shards:
+    - stackoverflowdupquestions.parquet
+- source_id: pawsx
+  paper_name: PawsX
+  paper_table: 9
+  paper_category: Paraphrase Detection
+  language: '7'
+  task_type: retrieval
+  paper_size: 216219
+  sampling_units:
+  - sampling_unit_id: pawsx_de
+    language: de
+    shards:
+    - pawsx_de.parquet
+  - sampling_unit_id: pawsx_en
+    language: en
+    shards:
+    - pawsx_en.parquet
+  - sampling_unit_id: pawsx_es
+    language: es
+    shards:
+    - pawsx_es.parquet
+  - sampling_unit_id: pawsx_fr
+    language: fr
+    shards:
+    - pawsx_fr.parquet
+  - sampling_unit_id: pawsx_ja
+    language: ja
+    shards:
+    - pawsx_ja.parquet
+  - sampling_unit_id: pawsx_ko
+    language: ko
+    shards:
+    - pawsx_ko.parquet
+  - sampling_unit_id: pawsx_zh
+    language: zh
+    shards:
+    - pawsx_zh.parquet
+- source_id: amazon_polarity
+  paper_name: Amazon Polarity
+  paper_table: 9
+  paper_category: Sentiment Analysis
+  language: en
+  task_type: classification
+  paper_size: 100000
+  sampling_units:
+  - sampling_unit_id: amazon_polarity
+    shards:
+    - amazon_polarity.parquet
+- source_id: imdb
+  paper_name: IMDb
+  paper_table: 9
+  paper_category: Sentiment Analysis
+  language: en
+  task_type: classification
+  paper_size: 24904
+  sampling_units:
+  - sampling_unit_id: imdb
+    shards:
+    - imdb.parquet
+- source_id: toxic_conversations
+  paper_name: Toxic Conversations
+  paper_table: 9
+  paper_category: Sentiment Analysis
+  language: en
+  task_type: classification
+  paper_size: 49900
+  sampling_units:
+  - sampling_unit_id: toxic_conversations
+    shards:
+    - toxic_conversations.parquet
+- source_id: amazon_counterfactual
+  paper_name: Amazon Counterfactual
+  paper_table: 9
+  paper_category: Sentiment Analysis
+  language: en, de, ja
+  task_type: classification
+  paper_size: 14870
+  sampling_units:
+  - sampling_unit_id: amazon_counterfactual
+    shards:
+    - amazon_counterfactual.parquet
+- source_id: amazon_reviews
+  paper_name: Amazon Reviews
+  paper_table: 9
+  paper_category: Sentiment Analysis
+  language: '6'
+  task_type: clustering
+  paper_size: 600000
+  sampling_units:
+  - sampling_unit_id: amazon_reviews
+    shards:
+    - amazon_reviews.parquet
+- source_id: emotion
+  paper_name: Emotion
+  paper_table: 9
+  paper_category: Sentiment Analysis
+  language: en
+  task_type: clustering
+  paper_size: 17944
+  sampling_units:
+  - sampling_unit_id: emotion
+    shards:
+    - emotion.parquet
+- source_id: tweet_sentiment_extraction
+  paper_name: Tweet Sentiment Extraction
+  paper_table: 9
+  paper_category: Sentiment Analysis
+  language: en
+  task_type: clustering
+  paper_size: 26732
+  sampling_units:
+  - sampling_unit_id: tweet_sentiment_extraction
+    shards:
+    - tweet_sentiment_extraction.parquet
+- source_id: massive_intent
+  paper_name: Massive Intent
+  paper_table: 9
+  paper_category: Intent Classification
+  language: '51'
+  task_type: clustering
+  paper_size: 661923
+  sampling_units:
+  - sampling_unit_id: massive_intent
+    shards:
+    - massive_intent.parquet
+- source_id: mtop_intent
+  paper_name: MTOP Intent
+  paper_table: 9
+  paper_category: Intent Classification
+  language: '6'
+  task_type: clustering
+  paper_size: 83922
+  sampling_units:
+  - sampling_unit_id: mtop_intent
+    shards:
+    - mtop_intent.parquet
+- source_id: banking77
+  paper_name: Banking77
+  paper_table: 9
+  paper_category: Intent Classification
+  language: en
+  task_type: clustering
+  paper_size: 9993
+  sampling_units:
+  - sampling_unit_id: banking77
+    shards:
+    - banking77.parquet
+- source_id: massive_scenario
+  paper_name: Massive Scenario
+  paper_table: 9
+  paper_category: Domain Classification
+  language: '51'
+  task_type: clustering
+  paper_size: 661923
+  sampling_units:
+  - sampling_unit_id: massive_scenario
+    shards:
+    - massive_scenario.parquet
+- source_id: mtop_domain
+  paper_name: MTOP Domain
+  paper_table: 9
+  paper_category: Domain Classification
+  language: '6'
+  task_type: clustering
+  paper_size: 83922
+  sampling_units:
+  - sampling_unit_id: mtop_domain
+    shards:
+    - mtop_domain.parquet
+- source_id: bactrianx_language_classification
+  paper_name: BactrianX Language Classification
+  paper_table: 9
+  paper_category: Language Classification
+  language: '52'
+  task_type: clustering
+  paper_size: 491405
+  sampling_units:
+  - sampling_unit_id: bactrianx_language_classification
+    shards:
+    - bactrianx_language_classification.parquet
+- source_id: s2orc_title_citation
+  paper_name: S2ORC-TItle-Citation
+  paper_table: 9
+  paper_category: Citation Prediction
+  language: en
+  task_type: retrieval
+  paper_size: 132879
+  sampling_units:
+  - sampling_unit_id: s2orc_title_citation
+    shards:
+    - s2orc_title_citation.parquet
+- source_id: s2orc_abstract_citation
+  paper_name: S2ORC-Abstract-Citation
+  paper_table: 9
+  paper_category: Citation Prediction
+  language: en
+  task_type: retrieval
+  paper_size: 231587
+  sampling_units:
+  - sampling_unit_id: s2orc_abstract_citation
+    shards:
+    - s2orc_abstract_citation.parquet
+- source_id: specter
+  paper_name: SPECTER
+  paper_table: 9
+  paper_category: Citation Prediction
+  language: en
+  task_type: retrieval
+  paper_size: 24717
+  sampling_units:
+  - sampling_unit_id: specter
+    shards:
+    - specter.parquet
+- source_id: mela
+  paper_name: MELA
+  paper_table: 9
+  paper_category: Linguistic Acceptability
+  language: '10'
+  task_type: classification
+  paper_size: 40267
+  sampling_units:
+  - sampling_unit_id: mela
+    shards:
+    - path: mela.parquet
+      row_start: 0
+      row_stop: 40267
+- source_id: scala
+  paper_name: ScaLA
+  paper_table: 9
+  paper_category: Linguistic Acceptability
+  language: '9'
+  task_type: classification
+  paper_size: 128471
+  sampling_units:
+  - sampling_unit_id: scala
+    shards:
+    - path: mela.parquet
+      row_start: 40267
+      row_stop: 168738
+- source_id: dala
+  paper_name: DaLA
+  paper_table: 9
+  paper_category: Linguistic Acceptability
+  language: da
+  task_type: classification
+  paper_size: 6508
+  sampling_units:
+  - sampling_unit_id: dala
+    shards:
+    - path: mela.parquet
+      row_start: 168738
+      row_stop: 175246
+- source_id: fever
+  paper_name: FEVER
+  paper_table: 9
+  paper_category: Claim Verification
+  language: en
+  task_type: retrieval
+  paper_size: 106605
+  sampling_units:
+  - sampling_unit_id: fever
+    shards:
+    - fever.parquet
+- source_id: scifact
+  paper_name: SciFact
+  paper_table: 9
+  paper_category: Claim Verification
+  language: en
+  task_type: retrieval
+  paper_size: 859
+  sampling_units:
+  - sampling_unit_id: scifact
+    shards:
+    - scifact.parquet
+- source_id: coliee
+  paper_name: COLIEE
+  paper_table: 9
+  paper_category: Claim Verification
+  language: en
+  task_type: retrieval
+  paper_size: 454
+  sampling_units:
+  - sampling_unit_id: coliee
+    shards:
+    - coliee.parquet
+- source_id: sts12
+  paper_name: STS12
+  paper_table: 9
+  paper_category: STS
+  language: en
+  task_type: retrieval
+  paper_size: 1858
+  sampling_units:
+  - sampling_unit_id: sts12
+    shards:
+    - sts12.parquet
+- source_id: sts22
+  paper_name: STS22
+  paper_table: 9
+  paper_category: STS
+  language: en
+  task_type: retrieval
+  paper_size: 389
+  sampling_units:
+  - sampling_unit_id: sts22
+    shards:
+    - sts22.parquet
+- source_id: stsbenchmark
+  paper_name: STSBenchmark
+  paper_table: 9
+  paper_category: STS
+  language: en
+  task_type: retrieval
+  paper_size: 3297
+  sampling_units:
+  - sampling_unit_id: stsbenchmark
+    shards:
+    - stsbenchmark.parquet
+- source_id: sts22_crosslingual
+  paper_name: STS22-Crosslingual
+  paper_table: 9
+  paper_category: STS
+  language: '7'
+  task_type: retrieval
+  paper_size: 1469
+  sampling_units:
+  - sampling_unit_id: sts22_crosslingual
+    shards:
+    - sts22_multilingual.parquet
+- source_id: bq
+  paper_name: BQ
+  paper_table: 9
+  paper_category: STS
+  language: zh
+  task_type: retrieval
+  paper_size: 2436
+  sampling_units:
+  - sampling_unit_id: bq
+    shards:
+    - bq.parquet
+- source_id: llm_retrieval_data
+  paper_name: LLM Retrieval Data
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 177850
+  sampling_units:
+  - sampling_unit_id: llm_retrieval_data
+    shards:
+    - llm_retrieval_data.parquet
+- source_id: refgpt
+  paper_name: RefGPT
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 184332
+  sampling_units:
+  - sampling_unit_id: refgpt
+    shards:
+    - refgpt.parquet
+- source_id: lawzhidao
+  paper_name: Lawzhidao
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 11899
+  sampling_units:
+  - sampling_unit_id: lawzhidao
+    shards:
+    - lawzhidao.parquet
+- source_id: medmcqa
+  paper_name: MedMCQA
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 16526
+  sampling_units:
+  - sampling_unit_id: medmcqa
+    shards:
+    - medmcqa.parquet
+- source_id: cmcqa
+  paper_name: CMCQA
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 108529
+  sampling_units:
+  - sampling_unit_id: cmcqa
+    shards:
+    - cmcqa.parquet
+- source_id: medqa
+  paper_name: MedQA
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: en, zh
+  task_type: retrieval
+  paper_size: 13458
+  sampling_units:
+  - sampling_unit_id: medqa_en
+    language: en
+    shards:
+    - medqa_en.parquet
+  - sampling_unit_id: medqa_zh
+    language: zh
+    shards:
+    - medqa_zh.parquet
+- source_id: webmedqa
+  paper_name: webMedQA
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: zh
+  task_type: retrieval
+  paper_size: 27122
+  sampling_units:
+  - sampling_unit_id: webmedqa
+    shards:
+    - webmedqa.parquet
+- source_id: medquad
+  paper_name: MedQuAD
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 14268
+  sampling_units:
+  - sampling_unit_id: medquad
+    shards:
+    - medquad.parquet
+- source_id: medical_flashcards
+  paper_name: Medical Flashcards
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: en
+  task_type: retrieval
+  paper_size: 33183
+  sampling_units:
+  - sampling_unit_id: medical_flashcards
+    shards:
+    - medical_flashcards.parquet
+- source_id: mailruqa
+  paper_name: MailruQA
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: ru
+  task_type: retrieval
+  paper_size: 150777
+  sampling_units:
+  - sampling_unit_id: mailruqa
+    shards:
+    - mailruqa.parquet
+- source_id: wikiomnia
+  paper_name: WikiOmnia
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: ru
+  task_type: retrieval
+  paper_size: 462693
+  sampling_units:
+  - sampling_unit_id: wikiomnia
+    shards:
+    - wikiomnia.parquet
+- source_id: persianqa
+  paper_name: PersianQA
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: fa
+  task_type: retrieval
+  paper_size: 6277
+  sampling_units:
+  - sampling_unit_id: persianqa
+    shards:
+    - persian_qa.parquet
+- source_id: pquad
+  paper_name: PQuAD
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: fa
+  task_type: retrieval
+  paper_size: 46699
+  sampling_units:
+  - sampling_unit_id: pquad
+    shards:
+    - pquad.parquet
+- source_id: parsquad
+  paper_name: ParSQuAD
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: fa
+  task_type: retrieval
+  paper_size: 41879
+  sampling_units:
+  - sampling_unit_id: parsquad
+    shards:
+    - parsquad.parquet
+- source_id: mqa
+  paper_name: MQA
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: '38'
+  task_type: retrieval
+  paper_size: 5131895
+  sampling_units:
+  - sampling_unit_id: mqa_ar
+    language: ar
+    shards:
+    - mqa_ar.parquet
+  - sampling_unit_id: mqa_bg
+    language: bg
+    shards:
+    - mqa_bg.parquet
+  - sampling_unit_id: mqa_ca
+    language: ca
+    shards:
+    - mqa_ca.parquet
+  - sampling_unit_id: mqa_cs
+    language: cs
+    shards:
+    - mqa_cs.parquet
+  - sampling_unit_id: mqa_da
+    language: da
+    shards:
+    - mqa_da.parquet
+  - sampling_unit_id: mqa_de
+    language: de
+    shards:
+    - mqa_de.parquet
+  - sampling_unit_id: mqa_el
+    language: el
+    shards:
+    - mqa_el.parquet
+  - sampling_unit_id: mqa_es
+    language: es
+    shards:
+    - mqa_es.parquet
+  - sampling_unit_id: mqa_et
+    language: et
+    shards:
+    - mqa_et.parquet
+  - sampling_unit_id: mqa_fa
+    language: fa
+    shards:
+    - mqa_fa.parquet
+  - sampling_unit_id: mqa_fi
+    language: fi
+    shards:
+    - mqa_fi.parquet
+  - sampling_unit_id: mqa_fr
+    language: fr
+    shards:
+    - mqa_fr.parquet
+  - sampling_unit_id: mqa_he
+    language: he
+    shards:
+    - mqa_he.parquet
+  - sampling_unit_id: mqa_hi
+    language: hi
+    shards:
+    - mqa_hi.parquet
+  - sampling_unit_id: mqa_hr
+    language: hr
+    shards:
+    - mqa_hr.parquet
+  - sampling_unit_id: mqa_hu
+    language: hu
+    shards:
+    - mqa_hu.parquet
+  - sampling_unit_id: mqa_id
+    language: id
+    shards:
+    - mqa_id.parquet
+  - sampling_unit_id: mqa_is
+    language: is
+    shards:
+    - mqa_is.parquet
+  - sampling_unit_id: mqa_it
+    language: it
+    shards:
+    - mqa_it.parquet
+  - sampling_unit_id: mqa_ja
+    language: ja
+    shards:
+    - mqa_ja.parquet
+  - sampling_unit_id: mqa_ko
+    language: ko
+    shards:
+    - mqa_ko.parquet
+  - sampling_unit_id: mqa_lt
+    language: lt
+    shards:
+    - mqa_lt.parquet
+  - sampling_unit_id: mqa_lv
+    language: lv
+    shards:
+    - mqa_lv.parquet
+  - sampling_unit_id: mqa_ms
+    language: ms
+    shards:
+    - mqa_ms.parquet
+  - sampling_unit_id: mqa_nl
+    language: nl
+    shards:
+    - mqa_nl.parquet
+  - sampling_unit_id: mqa_no
+    language: 'no'
+    shards:
+    - mqa_no.parquet
+  - sampling_unit_id: mqa_pl
+    language: pl
+    shards:
+    - mqa_pl.parquet
+  - sampling_unit_id: mqa_pt
+    language: pt
+    shards:
+    - mqa_pt.parquet
+  - sampling_unit_id: mqa_ro
+    language: ro
+    shards:
+    - mqa_ro.parquet
+  - sampling_unit_id: mqa_ru
+    language: ru
+    shards:
+    - mqa_ru.parquet
+  - sampling_unit_id: mqa_sk
+    language: sk
+    shards:
+    - mqa_sk.parquet
+  - sampling_unit_id: mqa_sr
+    language: sr
+    shards:
+    - mqa_sr.parquet
+  - sampling_unit_id: mqa_sv
+    language: sv
+    shards:
+    - mqa_sv.parquet
+  - sampling_unit_id: mqa_th
+    language: th
+    shards:
+    - mqa_th.parquet
+  - sampling_unit_id: mqa_tr
+    language: tr
+    shards:
+    - mqa_tr.parquet
+  - sampling_unit_id: mqa_uk
+    language: uk
+    shards:
+    - mqa_uk.parquet
+  - sampling_unit_id: mqa_vi
+    language: vi
+    shards:
+    - mqa_vi.parquet
+  - sampling_unit_id: mqa_zh
+    language: zh
+    shards:
+    - mqa_zh.parquet
+- source_id: hotpotqa_nl
+  paper_name: HotpotQA-NL
+  paper_table: F2LLM-v2-1
+  paper_category: Question Answering
+  language: nl
+  task_type: retrieval
+  paper_size: 81192
+  sampling_units:
+  - sampling_unit_id: hotpotqa_nl
+    shards:
+    - hotpotqa_nl.parquet
+- source_id: siberiandataset
+  paper_name: SiberianDataset
+  paper_table: F2LLM-v2-1
+  paper_category: Instruction Data
+  language: ru
+  task_type: retrieval
+  paper_size: 255663
+  sampling_units:
+  - sampling_unit_id: siberiandataset
+    shards:
+    - siberian_dataset.parquet
+- source_id: ru_instruct
+  paper_name: Ru Instruct
+  paper_table: F2LLM-v2-1
+  paper_category: Instruction Data
+  language: ru
+  task_type: retrieval
+  paper_size: 452574
+  sampling_units:
+  - sampling_unit_id: ru_instruct
+    shards:
+    - ru_instruct.parquet
+- source_id: koalpaca_realqa
+  paper_name: KoAlpaca-RealQA
+  paper_table: F2LLM-v2-1
+  paper_category: Instruction Data
+  language: ko
+  task_type: retrieval
+  paper_size: 17599
+  sampling_units:
+  - sampling_unit_id: koalpaca_realqa
+    shards:
+    - koalpaca_realqa.parquet
+- source_id: koalpaca
+  paper_name: KoAlpaca
+  paper_table: F2LLM-v2-1
+  paper_category: Instruction Data
+  language: ko
+  task_type: retrieval
+  paper_size: 21126
+  sampling_units:
+  - sampling_unit_id: koalpaca
+    shards:
+    - koalpaca.parquet
+- source_id: komagpie
+  paper_name: KoMagpie
+  paper_table: F2LLM-v2-1
+  paper_category: Instruction Data
+  language: ko
+  task_type: retrieval
+  paper_size: 428780
+  sampling_units:
+  - sampling_unit_id: komagpie
+    shards:
+    - komagpie.parquet
+- source_id: nordic_text_matching
+  paper_name: Nordic Text Matching
+  paper_table: F2LLM-v2-1
+  paper_category: Instruction Data
+  language: da, sv, no
+  task_type: retrieval
+  paper_size: 182485
+  sampling_units:
+  - sampling_unit_id: nordic_text_matching_danish
+    language: danish
+    shards:
+    - nordic_text_matching_danish.parquet
+  - sampling_unit_id: nordic_text_matching_norwegian
+    language: norwegian
+    shards:
+    - nordic_text_matching_norwegian.parquet
+  - sampling_unit_id: nordic_text_matching_swedish
+    language: swedish
+    shards:
+    - nordic_text_matching_swedish.parquet
+- source_id: nordic_retrieval
+  paper_name: Nordic Retrieval
+  paper_table: F2LLM-v2-1
+  paper_category: Instruction Data
+  language: da, sv, no
+  task_type: retrieval
+  paper_size: 172437
+  sampling_units:
+  - sampling_unit_id: nordic_retrieval_danish
+    language: danish
+    shards:
+    - nordic_retrieval_danish.parquet
+  - sampling_unit_id: nordic_retrieval_norwegian
+    language: norwegian
+    shards:
+    - nordic_retrieval_norwegian.parquet
+  - sampling_unit_id: nordic_retrieval_swedish
+    language: swedish
+    shards:
+    - nordic_retrieval_swedish.parquet
+- source_id: nordic_classification
+  paper_name: Nordic Classification
+  paper_table: F2LLM-v2-1
+  paper_category: Instruction Data
+  language: da, sv, no
+  task_type: classification
+  paper_size: 199280
+  sampling_units:
+  - sampling_unit_id: nordic_classification_danish
+    language: danish
+    shards:
+    - nordic_classification_danish.parquet
+  - sampling_unit_id: nordic_classification_norwegian
+    language: norwegian
+    shards:
+    - nordic_classification_norwegian.parquet
+  - sampling_unit_id: nordic_classification_swedish
+    language: swedish
+    shards:
+    - nordic_classification_swedish.parquet
+- source_id: dbpedia
+  paper_name: DBPedia
+  paper_table: F2LLM-v2-1
+  paper_category: Title Matching
+  language: en
+  task_type: retrieval
+  paper_size: 288736
+  sampling_units:
+  - sampling_unit_id: dbpedia
+    shards:
+    - dbpedia.parquet
+- source_id: cmnli
+  paper_name: CMNLI
+  paper_table: F2LLM-v2-1
+  paper_category: NLI
+  language: zh
+  task_type: retrieval
+  paper_size: 113914
+  sampling_units:
+  - sampling_unit_id: cmnli
+    shards:
+    - cmnli.parquet
+- source_id: mscinli
+  paper_name: MSciNLI
+  paper_table: F2LLM-v2-1
+  paper_category: NLI
+  language: en
+  task_type: retrieval
+  paper_size: 19185
+  sampling_units:
+  - sampling_unit_id: mscinli
+    shards:
+    - mscinli.parquet
+- source_id: lcqmc
+  paper_name: LCQMC
+  paper_table: F2LLM-v2-2
+  paper_category: Paraphrase Detection
+  language: zh
+  task_type: retrieval
+  paper_size: 167213
+  sampling_units:
+  - sampling_unit_id: lcqmc
+    shards:
+    - lcqmc.parquet
+- source_id: waimai
+  paper_name: Waimai
+  paper_table: F2LLM-v2-2
+  paper_category: Sentiment Analysis
+  language: zh
+  task_type: classification
+  paper_size: 7999
+  sampling_units:
+  - sampling_unit_id: waimai
+    shards:
+    - waimai.parquet
+- source_id: rusentiment
+  paper_name: RuSentiment
+  paper_table: F2LLM-v2-2
+  paper_category: Sentiment Analysis
+  language: ru
+  task_type: clustering
+  paper_size: 100000
+  sampling_units:
+  - sampling_unit_id: rusentiment
+    shards:
+    - ru_sentiment.parquet
+- source_id: cedr
+  paper_name: CEDR
+  paper_table: F2LLM-v2-2
+  paper_category: Sentiment Analysis
+  language: ru
+  task_type: clustering
+  paper_size: 4376
+  sampling_units:
+  - sampling_unit_id: cedr
+    shards:
+    - cedr.parquet
+- source_id: fever_nl
+  paper_name: FEVER-NL
+  paper_table: F2LLM-v2-2
+  paper_category: Claim Verification
+  language: nl
+  task_type: retrieval
+  paper_size: 94987
+  sampling_units:
+  - sampling_unit_id: fever_nl
+    shards:
+    - fever_nl.parquet
+- source_id: qbqtc
+  paper_name: QBQTC
+  paper_table: F2LLM-v2-2
+  paper_category: STS
+  language: zh
+  task_type: retrieval
+  paper_size: 37139
+  sampling_units:
+  - sampling_unit_id: qbqtc
+    shards:
+    - qbqtc.parquet
+- source_id: simclue
+  paper_name: SimCLUE
+  paper_table: F2LLM-v2-2
+  paper_category: STS
+  language: zh
+  task_type: retrieval
+  paper_size: 213301
+  sampling_units:
+  - sampling_unit_id: simclue
+    shards:
+    - simclue.parquet
+- source_id: lcsts
+  paper_name: LCSTS
+  paper_table: F2LLM-v2-2
+  paper_category: STS
+  language: zh
+  task_type: retrieval
+  paper_size: 278146
+  sampling_units:
+  - sampling_unit_id: lcsts
+    shards:
+    - lcsts.parquet
+- source_id: nordic_sts
+  paper_name: Nordic STS
+  paper_table: F2LLM-v2-2
+  paper_category: STS
+  language: da, sv, no
+  task_type: retrieval
+  paper_size: 70617
+  sampling_units:
+  - sampling_unit_id: nordic_sts_danish
+    language: danish
+    shards:
+    - nordic_sts_danish.parquet
+  - sampling_unit_id: nordic_sts_norwegian
+    language: norwegian
+    shards:
+    - nordic_sts_norwegian.parquet
+  - sampling_unit_id: nordic_sts_swedish
+    language: swedish
+    shards:
+    - nordic_sts_swedish.parquet
