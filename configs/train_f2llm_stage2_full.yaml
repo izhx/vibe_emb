@@ -58,7 +58,7 @@ training:
   dataloader_pin_memory: true
   ddp_find_unused_parameters: false
   remove_unused_columns: false
-  report_to: none
+  report_to: tensorboard
   temperature: 0.05
   negatives_cross_device: true
   sub_batch_size: 0

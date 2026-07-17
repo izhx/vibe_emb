@@ -70,7 +70,6 @@ DEFAULT_TASKS = [
     # "ToolRetRetrieval"
 ]
 
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Evaluate a local decoder-only embedding model checkpoint with MTEB."
@@ -201,12 +200,11 @@ def build_tasks(
     if not tasks:
         raise ValueError("No MTEB tasks were selected.")
 
-    # MindSmallReranking is currently unusually slow, so run it only after all
-    # other selected tasks while preserving their relative order.
-    return sorted(
-        tasks,
-        key=lambda task: task.metadata.name == "MindSmallReranking",
+    from vibe_eval.tasks.mind_small_reranking_patch import (
+        patch_mind_small_reranking_tasks,
     )
+
+    return patch_mind_small_reranking_tasks(tasks)
 
 
 def _iter_download_tasks(tasks: Sequence[Any]):
@@ -282,6 +280,14 @@ def main() -> None:
 
     import mteb
     from vibe_eval.modeling import QwenDecoderOnlyEmbedder
+    from vibe_eval.mteb_patches import (
+        install_query_dataloader_patch,
+        install_reranking_top_ranked_patch,
+    )
+
+    install_query_dataloader_patch()
+
+    install_reranking_top_ranked_patch(tasks)
 
     model = QwenDecoderOnlyEmbedder(
         model_name_or_path=args.model_name_or_path,
