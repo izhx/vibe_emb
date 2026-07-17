@@ -7,9 +7,11 @@ from typing import Any
 import numpy as np
 import torch
 import torch.nn.functional as F
+from mteb.models.abs_encoder import AbsEncoder
+from mteb.models.model_implementations.codefuse_models import f2llmv2_prompts_dict
 from mteb.models.model_meta import ModelMeta
 from mteb.models.model_meta import ScoringFunction
-from mteb.types import PromptType
+from mteb.types import BatchedInput, PromptType
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import AutoModel, AutoTokenizer
@@ -18,10 +20,10 @@ from transformers import AutoModel, AutoTokenizer
 DEFAULT_QUERY_INSTRUCTION = (
     "Given a query, retrieve passages that are relevant to the query."
 )
-DEFAULT_QUERY_INSTRUCTION_FORMAT = "Instruct: {}\nQuery: {}"
+DEFAULT_QUERY_INSTRUCTION_FORMAT = "Instruct: {instruction}\nQuery: "
 
 
-class QwenDecoderOnlyEmbedder:
+class QwenDecoderOnlyEmbedder(AbsEncoder):
     """MTEB encoder wrapper for decoder-only embedding checkpoints."""
 
     def __init__(
@@ -32,7 +34,6 @@ class QwenDecoderOnlyEmbedder:
         adapter_name_or_path: str | None = None,
         device: str | None = None,
         dtype: str = "auto",
-        batch_size: int = 32,
         max_length: int = 512,
         query_max_length: int | None = None,
         corpus_max_length: int | None = None,
@@ -51,13 +52,14 @@ class QwenDecoderOnlyEmbedder:
         self.checkpoint = checkpoint or model_path
         self.model_name_or_path = model_path
         self.adapter_name_or_path = adapter_path
-        self.batch_size = batch_size
         self.max_length = max_length
         self.query_max_length = query_max_length or max_length
         self.corpus_max_length = corpus_max_length or max_length
         self.query_instruction = query_instruction
-        self.query_instruction_format = query_instruction_format
         self.use_task_prompts = use_task_prompts
+        self.instruction_template = query_instruction_format
+        self.prompts_dict = f2llmv2_prompts_dict
+        self.apply_instruction_to_passages = False
         self.normalize_embeddings = normalize_embeddings
         self.device = torch.device(
             device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -207,35 +209,47 @@ class QwenDecoderOnlyEmbedder:
 
     def encode(
         self,
-        inputs: DataLoader | Iterable[str] | list[str],
+        inputs: DataLoader[BatchedInput],
         *,
         task_metadata: Any | None = None,
         hf_split: str | None = None,
         hf_subset: str | None = None,
         prompt_type: PromptType | str | None = None,
-        batch_size: int | None = None,
         show_progress_bar: bool | None = None,
         **_: Any,
     ) -> np.ndarray:
-        texts = self._collect_texts(inputs)
         is_query = self._is_query(prompt_type)
-        if is_query:
-            instruction = self._query_instruction_for_task(task_metadata)
-            texts = [
-                self.query_instruction_format.format(instruction, text)
-                for text in texts
-            ]
-
-        effective_batch_size = batch_size or self.batch_size
         max_length = self.query_max_length if is_query else self.corpus_max_length
-        batches = range(0, len(texts), effective_batch_size)
-        if show_progress_bar:
-            batches = tqdm(batches, desc="Encoding", leave=False, mininterval=20)
+        instruction = self._instruction_for_task(task_metadata, prompt_type)
+        if not isinstance(inputs, DataLoader):
+            raise TypeError("MTEB encoders require a DataLoader[BatchedInput].")
+        progress = tqdm(
+            total=self._input_length(inputs),
+            desc="Encoding",
+            leave=False,
+            mininterval=20,
+            unit="texts",
+            disable=not show_progress_bar,
+        )
 
         embeddings: list[torch.Tensor] = []
         with torch.inference_mode():
-            for start in batches:
-                batch_texts = texts[start : start + effective_batch_size]
+            for batch in inputs:
+                if not isinstance(batch, dict) or "text" not in batch:
+                    raise TypeError(
+                        "MTEB text encoders expect each DataLoader batch to be a "
+                        "BatchedInput mapping containing a 'text' field."
+                    )
+                # texts = batch["text"]
+                # if not isinstance(texts, (list, tuple)) or not all(
+                #     isinstance(text, str) for text in texts
+                # ):
+                #     raise TypeError(
+                #         "MTEB BatchedInput['text'] must be a sequence of strings."
+                #     )
+                batch_texts = list(batch["text"])
+                if instruction is not None:
+                    batch_texts = [instruction + text for text in batch_texts]
                 features = self.tokenizer(
                     batch_texts,
                     padding=True,
@@ -252,17 +266,12 @@ class QwenDecoderOnlyEmbedder:
                 if self.normalize_embeddings:
                     reps = F.normalize(reps, dim=-1)
                 embeddings.append(reps.cpu())
+                progress.update(len(batch_texts))
+        progress.close()
 
         if not embeddings:
             return np.empty((0, self.mteb_model_meta.embed_dim or 0), dtype=np.float32)
         return torch.cat(embeddings, dim=0).float().numpy()
-
-    def encode_queries(self, queries: Iterable[str], **kwargs: Any) -> np.ndarray:
-        return self.encode(queries, prompt_type=PromptType.query, **kwargs)
-
-    def encode_corpus(self, corpus: Iterable[str | dict[str, Any]], **kwargs: Any) -> np.ndarray:
-        texts = [self._text_from_item(item) for item in corpus]
-        return self.encode(texts, prompt_type=PromptType.document, **kwargs)
 
     def similarity(self, embeddings1: Any, embeddings2: Any) -> torch.Tensor:
         return torch.as_tensor(embeddings1) @ torch.as_tensor(embeddings2).T
@@ -289,13 +298,27 @@ class QwenDecoderOnlyEmbedder:
             raise ValueError(f"Unsupported dtype: {dtype}")
         return mapping[dtype]
 
-    def _query_instruction_for_task(self, task_metadata: Any | None) -> str:
-        if not self.use_task_prompts or task_metadata is None:
-            return self.query_instruction
-        prompt = getattr(task_metadata, "prompt", None)
-        if isinstance(prompt, dict):
-            return prompt.get("query") or self.query_instruction
-        return self.query_instruction
+    def _instruction_for_task(
+        self,
+        task_metadata: Any | None,
+        prompt_type: PromptType | str | None,
+    ) -> str | None:
+        if not self.use_task_prompts:
+            if not self._is_query(prompt_type):
+                return None
+            return self.format_instruction(self.query_instruction, prompt_type)
+        if task_metadata is None:
+            if not self._is_query(prompt_type):
+                return None
+            return self.format_instruction(self.query_instruction, prompt_type)
+
+        instruction = self.get_task_instruction(task_metadata, prompt_type)
+        if (
+            not self.apply_instruction_to_passages
+            and prompt_type == PromptType.document
+        ):
+            return None
+        return instruction or None
 
     @staticmethod
     def _is_query(prompt_type: PromptType | str | None) -> bool:
@@ -304,28 +327,17 @@ class QwenDecoderOnlyEmbedder:
         value = getattr(prompt_type, "value", prompt_type)
         return str(value).lower() == "query"
 
-    def _collect_texts(self, inputs: DataLoader | Iterable[str] | list[str]) -> list[str]:
-        if isinstance(inputs, DataLoader):
-            texts: list[str] = []
-            for batch in inputs:
-                if isinstance(batch, dict):
-                    texts.extend([self._text_from_item(x) for x in batch["text"]])
-                else:
-                    texts.extend([self._text_from_item(x) for x in batch])
-            return texts
-        return [self._text_from_item(item) for item in inputs]
-
     @staticmethod
-    def _text_from_item(item: Any) -> str:
-        if isinstance(item, str):
-            return item
-        if isinstance(item, dict):
-            text = item.get("text", "")
-            title = item.get("title", "")
-            if title:
-                return f"{title} {text}".strip()
-            return str(text)
-        return str(item)
+    def _input_length(inputs: Any) -> int | None:
+        if isinstance(inputs, DataLoader) and hasattr(inputs, "dataset"):
+            try:
+                return len(inputs.dataset)
+            except TypeError:
+                return None
+        try:
+            return len(inputs)
+        except TypeError:
+            return None
 
     @staticmethod
     def _last_token_pool(

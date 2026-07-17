@@ -123,7 +123,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval_splits", nargs="+", default=None)
     parser.add_argument("--eval_subsets", nargs="+", default=None)
     # parser.add_argument("--cache_dir", default="/data8/zhangxin/vibe_emb/.cache")
-    parser.add_argument("--cache_dir", default="/root/mteb_hf_cache")
+    parser.add_argument("--cache_dir", default="/mnt/share/emb/mteb_cache")
     parser.add_argument("--output_folder", default="results/mteb_eval")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--max_length", type=int, default=2048)
@@ -137,11 +137,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--query_instruction",
-        default="Given a query, retrieve passages that are relevant to the query.",
+        default="Given a question, retrieve passages that can help answer the question.",
     )
     parser.add_argument(
         "--query_instruction_format",
-        default="Instruct: {}\nQuery: {}",
+        default="Instruct: {instruction}\nQuery: ",
     )
     parser.add_argument(
         "--no_task_prompts",
@@ -200,7 +200,13 @@ def build_tasks(
 
     if not tasks:
         raise ValueError("No MTEB tasks were selected.")
-    return tasks
+
+    # MindSmallReranking is currently unusually slow, so run it only after all
+    # other selected tasks while preserving their relative order.
+    return sorted(
+        tasks,
+        key=lambda task: task.metadata.name == "MindSmallReranking",
+    )
 
 
 def _iter_download_tasks(tasks: Sequence[Any]):
@@ -282,7 +288,6 @@ def main() -> None:
         adapter_name_or_path=args.adapter,
         device=args.device,
         dtype=args.dtype,
-        batch_size=args.batch_size,
         max_length=args.max_length,
         query_max_length=args.query_max_length,
         corpus_max_length=args.corpus_max_length,

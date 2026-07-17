@@ -1,54 +1,49 @@
 # AGENTS.md
 
-本项目是 Qwen2.5-0.5B 系列 embedding / retrieval 训练、评估和 LoRA adapter 合并实验仓库。根目录 `AGENTS.md` 是本文件的软链接。
+本仓库用于 embedding / retrieval 模型的训练、评估以及 adapter 相关实验。仓库中会并行开展多个任务；本文件只描述跨任务通用的结构和维护约定。任务的数据定义、配置、命令、实验结论和特殊约束应记录在各自目录或对应文档中，不要补充到本文件。
 
-## 重要目录
+## 通用目录
 
-- `vibe_emb/`: 训练框架核心代码。
-  - `train.py`: YAML 配置训练入口，负责加载 tokenizer/model/dataset/trainer，并保存 resolved config。
-  - `arguments.py`: `model`、`data`、`training_extras` 配置 dataclass 定义。
-  - `config.py`: YAML 读取、配置分段和 dataclass 构建。
-  - `data.py`: 多数据集 batch plan、same-dataset batching、instruction 格式和采样逻辑。
-  - `collator.py`: 将预构造 batch tokenize 成 query/passage features。
-  - `modeling.py`: base model / PEFT LoRA 加载、embedding pooling、contrastive loss。
-  - `trainer.py`: 自定义 `Trainer`，配合 embedding batch 和 loss 输出。
-- `vibe_eval/`: MTEB 评估代码。
-  - `modeling.py`: `QwenDecoderOnlyEmbedder`，加载 base model + PEFT checkpoint 并实现 MTEB encode 接口。
-  - `run_mteb.py`: MTEB 评估入口，包含默认 retrieval task 列表。
-  - `tasks/toolret.py`: 本地 ToolRet retrieval task。
-- `scripts/`: 训练、评估、adapter 合并的 shell 入口和检查脚本。
-  - `merge_lora.py`: 将单个 PEFT LoRA adapter merge 成完整模型权重。
-  - `eval_adapter_retrieval_smoke.py`: 小样本 retrieval sanity eval。
-  - `verify_dataset_batch_plan.py`: 检查分布式 batch plan 是否跨 rank 对齐。
-  - `summarize_mteb_main_score.py`: 汇总 MTEB 结果主指标。
-  - `run_merge_experiment.sh`、`run_self_positioning_merge.sh`、`run_eval.sh`: 常用实验入口。
-- `tools/`: 独立工具脚本。
-  - `merge_multi_slerp.py`: 多 adapter Multi-SLERP 合并工具，支持 reference adapter 的 task-vector 空间。
-  - `merge_self_positioning.py`: 基于 probe dataset 搜索 adapter 合并权重并保存 merged adapter。
-- `configs/`: 训练 YAML 示例和各任务 LoRA warm-start 配置。
-- `multitask/`: 多任务数据、实验脚本和记录文档。
-- `data/`、`results/`: 本地数据和实验产物，通常较大，不要无关改动。
+- `vibe_emb/`：训练框架核心代码，包括配置解析、数据加载与 batch 构造、collator、模型封装、训练器和回调。
+- `vibe_eval/`：embedding / retrieval 评估代码，包括模型封装、MTEB 入口和本地任务定义。
+- `configs/`：可复用配置及配置示例。任务专属配置可以放在其子目录中，但不应被视为全仓库默认值。
+- `scripts/`：训练、评估、数据检查和模型处理等命令行入口。任务专属脚本应归入明确的子目录。
+- `tools/`：不属于主训练或评估入口的独立工具。
+- `tests/`：自动化测试。
+- `aidoc/`：设计、实现和实验文档。
+  - `aidoc/f2llm/`：F2LLM 实现相关的设计文档与开发记录。
+  - `aidoc/mteb/`：使用和维护 MTEB 评估所需知识的总结。
+- `multitask/aidoc/`：multitask 任务的设计、数据处理、训练和实验记录。
+- `data/`、`results/`：本地数据和实验产物，通常体积较大，不要无关修改或提交。
+- `ref_repo/`：用于参考的外部仓库或代码快照，不作为本仓库实现直接修改，除非任务明确要求。
 
-## 重要文档
+## 通用入口
 
-- `vibe_emb/embedding_training_framework.md`: 训练框架、数据采样、PEFT warm-start、保存和测试场景说明。
-- `multitask/aidoc/data_proc.md`: 检索训练数据处理记录和复现命令。
-- `multitask/aidoc/train.md`: 多任务训练配置、采样策略、batch 分析和 smoke run 记录。
-- `multitask/aidoc/model_merging.md`: adapter SLERP / self-positioning merge 原理、脚本入口和实验结果。
-- `README.md`: 环境依赖的简要记录。
+- YAML 训练入口：`python -m vibe_emb.train --config <config.yaml>`。
+- MTEB 评估入口：`python -m vibe_eval.run_mteb ...`；具体参数以 `python -m vibe_eval.run_mteb --help` 和当前代码为准。
+- shell 脚本只是具体工作流的包装。使用前先阅读脚本和对应配置，不要把某个任务脚本当作全仓库默认入口。
 
-## 常用命令
+## 工作原则
 
-- 训练入口通常走 shell 包装脚本，例如 `bash scripts/train.sh` 或 `bash scripts/train_task.sh`；底层是 `python -m vibe_emb.train --config <yaml>`。
-- MTEB 评估入口是 `python -m vibe_eval.run_mteb --checkpoint <adapter_dir>`，也可用 `bash scripts/run_eval.sh`。
-- 四任务 Multi-SLERP merge 默认入口是 `bash scripts/run_merge_experiment.sh`。
-- self-positioning merge 默认入口是 `bash scripts/run_self_positioning_merge.sh`。
+- 修改前先确认改动属于训练框架、评估框架还是某个具体任务。任务专属逻辑尽量留在任务自己的配置、脚本或模块中，避免写入通用模块。
+- 以当前代码、配置和命令行帮助为准；文档与实现不一致时，在同一改动中更新相关文档。
+- 保持配置驱动。不要为了单个实验在通用代码中硬编码模型路径、数据路径、任务列表、采样比例、batch 参数或输出目录。
+- PEFT adapter 与完整模型 checkpoint 的加载和保存语义不同。涉及 warm-start、评估或 merge 时，先确认输入产物类型以及 base model 的来源。
+- 分布式训练或跨设备评估的改动，应特别检查各 rank 的数据步数、batch 形状、collective 调用顺序和输出聚合是否一致。
+- 修改公开入口、文件位置或配置字段时，同步修复脚本、import、文档链接和测试，不保留无依据的兼容分支。
+- 不要无关改动 `data/`、`results/`、参考仓库或其他任务的配置与实验记录。
+- 不提交 `__pycache__/`、测试缓存、临时日志、下载缓存以及大体积训练或评估产物，除非任务明确要求。
 
-## 维护注意事项
+## 验证原则
 
-- PEFT adapter checkpoint 不是完整 `AutoModel` checkpoint。训练 warm-start 使用 `model.peft_adapter_name_or_path` 指向 adapter，`model.model_name_or_path` 仍指向 base model。
-- `MultiDatasetBatchDataset` 返回的每个 item 已经是一个 rank-local contrastive batch；训练配置中 `per_device_train_batch_size` 必须保持为 `1`，`gradient_accumulation_steps` 也必须为 `1`。
-- 分布式训练时各 rank 的 dataset/batch plan 必须一致，否则 cross-device negatives 可能挂住或 target offset 错位。
-- 修改训练数据、采样或 collator 后，优先跑 `scripts/verify_dataset_batch_plan.py` 或小规模 smoke 训练。
-- 修改评估或 adapter 合并代码后，优先用 smoke eval 或加载生成的 `adapter_model.safetensors` 做快速验证。
-- 避免提交 `__pycache__/`、大体积 `data/`、`results/` 产物，除非明确需要保存某次实验记录。
+- 验证范围应与改动匹配：优先运行相关单测、静态导入或编译检查，再按需要执行最小规模 smoke run。
+- 数据加载、采样、batch plan 或 collator 有改动时，检查单进程与分布式场景下的样本数、batch 结构和 rank 对齐。
+- 模型加载、adapter 或 merge 逻辑有改动时，至少验证生成产物可重新加载，并检查关键权重或输出形状。
+- 评估代码有改动时，先使用小任务或小样本验证加载、编码、缓存和结果写出，再运行完整评估。
+- 汇报验证结果时，明确区分已实际执行的检查、未执行的检查以及受环境限制的部分。
+
+## 文档边界
+
+- 本文件只维护稳定、跨任务适用的规则，不记录某次实验状态、机器路径、临时环境问题或任务待办。
+- 任务专属的数据格式、预处理步骤、训练超参数、评估集合、合并方法和复现命令，应写入对应任务文档。
+- 新增任务时，优先为它建立独立目录或文档入口；只有确实适用于所有任务的约定才补充到本文件。
