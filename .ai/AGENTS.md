@@ -2,6 +2,10 @@
 
 本仓库用于 embedding / retrieval 模型的训练、评估以及 adapter 相关实验。仓库中会并行开展多个任务；本文件只描述跨任务通用的结构和维护约定。任务的数据定义、配置、命令、实验结论和特殊约束应记录在各自目录或对应文档中，不要补充到本文件。
 
+## Agent 工作环境
+
+- Codex 可能运行在网络代理环境中。执行涉及网络访问的命令或动作时，默认先清除 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 及对应的小写代理环境变量，使用设备原生网络；只有任务明确要求使用代理时才例外。
+
 ## 通用目录
 
 - `vibe_emb/`：训练框架核心代码，包括配置解析、数据加载与 batch 构造、collator、模型封装、训练器和回调。
@@ -22,6 +26,7 @@
 - YAML 训练入口：`python -m vibe_emb.train --config <config.yaml>`。
 - MTEB 评估入口：`python -m vibe_eval.run_mteb ...`；具体参数以 `python -m vibe_eval.run_mteb --help` 和当前代码为准。
 - shell 脚本只是具体工作流的包装。使用前先阅读脚本和对应配置，不要把某个任务脚本当作全仓库默认入口。
+
 
 ## 工作原则
 

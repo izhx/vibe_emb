@@ -35,8 +35,6 @@ class QwenDecoderOnlyEmbedder(AbsEncoder):
         device: str | None = None,
         dtype: str = "auto",
         max_length: int = 512,
-        query_max_length: int | None = None,
-        corpus_max_length: int | None = None,
         query_instruction: str = DEFAULT_QUERY_INSTRUCTION,
         query_instruction_format: str = DEFAULT_QUERY_INSTRUCTION_FORMAT,
         use_task_prompts: bool = True,
@@ -53,8 +51,6 @@ class QwenDecoderOnlyEmbedder(AbsEncoder):
         self.model_name_or_path = model_path
         self.adapter_name_or_path = adapter_path
         self.max_length = max_length
-        self.query_max_length = query_max_length or max_length
-        self.corpus_max_length = corpus_max_length or max_length
         self.query_instruction = query_instruction
         self.use_task_prompts = use_task_prompts
         self.instruction_template = query_instruction_format
@@ -218,8 +214,6 @@ class QwenDecoderOnlyEmbedder(AbsEncoder):
         show_progress_bar: bool | None = None,
         **_: Any,
     ) -> np.ndarray:
-        is_query = self._is_query(prompt_type)
-        max_length = self.query_max_length if is_query else self.corpus_max_length
         instruction = self._instruction_for_task(task_metadata, prompt_type)
         if not isinstance(inputs, DataLoader):
             raise TypeError("MTEB encoders require a DataLoader[BatchedInput].")
@@ -254,7 +248,7 @@ class QwenDecoderOnlyEmbedder(AbsEncoder):
                     batch_texts,
                     padding=True,
                     truncation=True,
-                    max_length=max_length,
+                    max_length=self.max_length,
                     return_tensors="pt",
                 )
                 features = {k: v.to(self.device) for k, v in features.items()}

@@ -21,7 +21,6 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
     level=logging.WARNING,
 )
-logging.getLogger("mteb").setLevel(logging.INFO)
 
 os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
 
@@ -119,15 +118,18 @@ def parse_args() -> argparse.Namespace:
             "selected tasks, call task.load_data() for each, and exit."
         ),
     )
-    parser.add_argument("--eval_splits", nargs="+", default=None)
-    parser.add_argument("--eval_subsets", nargs="+", default=None)
     # parser.add_argument("--cache_dir", default="/data8/zhangxin/vibe_emb/.cache")
     parser.add_argument("--cache_dir", default="/mnt/share/emb/mteb_cache")
-    parser.add_argument("--output_folder", default="results/mteb_eval")
+    parser.add_argument(
+        "--output_folder",
+        default="results/mteb_eval",
+        help=(
+            "Result directory. JSON files are stored below its "
+            "<model>/<revision>/ directory."
+        ),
+    )
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--max_length", type=int, default=2048)
-    parser.add_argument("--query_max_length", type=int, default=2048)
-    parser.add_argument("--corpus_max_length", type=int, default=2048)
     parser.add_argument("--device", default='cuda')
     parser.add_argument(
         "--dtype",
@@ -149,8 +151,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--trust_remote_code", action="store_true")
     parser.add_argument("--no_flash_attn", action="store_true")
-    parser.add_argument("--overwrite_results", action="store_true")
-    parser.add_argument("--verbosity", type=int, default=2)
+    parser.add_argument(
+        "--overwrite_results",
+        action="store_true",
+        help="Always rerun selected evaluations and overwrite cached results.",
+    )
+    parser.add_argument("--verbosity", type=int, choices=range(4), default=2)
     return parser.parse_args()
 
 
@@ -200,11 +206,23 @@ def build_tasks(
     if not tasks:
         raise ValueError("No MTEB tasks were selected.")
 
-    from vibe_eval.tasks.mind_small_reranking_patch import (
-        patch_mind_small_reranking_tasks,
-    )
+    from vibe_eval.tasks.belebele_retrieval import patch_belebele_tasks
+    from vibe_eval.tasks.code_edit_search_retrieval import patch_code_edit_search_tasks
+    from vibe_eval.tasks.mind_small_reranking_patch import patch_mind_small_reranking_tasks
 
+    tasks = patch_code_edit_search_tasks(tasks)
+    tasks = patch_belebele_tasks(tasks)
     return patch_mind_small_reranking_tasks(tasks)
+
+
+def configure_mteb_verbosity(verbosity: int) -> None:
+    levels = {
+        0: logging.CRITICAL,
+        1: logging.WARNING,
+        2: logging.INFO,
+        3: logging.DEBUG,
+    }
+    logging.getLogger("mteb").setLevel(levels[verbosity])
 
 
 def _iter_download_tasks(tasks: Sequence[Any]):
@@ -282,10 +300,14 @@ def main() -> None:
     from vibe_eval.modeling import QwenDecoderOnlyEmbedder
     from vibe_eval.mteb_patches import (
         install_query_dataloader_patch,
+        install_retrieval_qrels_offline_patch,
         install_reranking_top_ranked_patch,
+        create_result_cache,
     )
 
+    configure_mteb_verbosity(args.verbosity)
     install_query_dataloader_patch()
+    install_retrieval_qrels_offline_patch()
 
     install_reranking_top_ranked_patch(tasks)
 
@@ -295,8 +317,6 @@ def main() -> None:
         device=args.device,
         dtype=args.dtype,
         max_length=args.max_length,
-        query_max_length=args.query_max_length,
-        corpus_max_length=args.corpus_max_length,
         query_instruction=args.query_instruction,
         query_instruction_format=args.query_instruction_format,
         use_task_prompts=not args.no_task_prompts,
@@ -304,18 +324,23 @@ def main() -> None:
         use_flash_attn=not args.no_flash_attn,
     )
 
-    evaluator = mteb.MTEB(tasks=tasks)
-    results = evaluator.run(
-        model,
-        output_folder=args.output_folder,
-        eval_splits=args.eval_splits,
-        eval_subsets=args.eval_subsets,
-        overwrite_results=args.overwrite_results,
-        verbosity=args.verbosity,
-        encode_kwargs={"batch_size": args.batch_size, "show_progress_bar": True},
+    result_cache = create_result_cache(mteb, args.output_folder)
+    results = mteb.evaluate(
+        model=model,
+        tasks=tasks,
+        cache=result_cache,
+        co2_tracker=False,
+        overwrite_strategy="always" if args.overwrite_results else "only-missing",
+        encode_kwargs={"batch_size": args.batch_size},
     )
-    print(json.dumps([result.to_dict() for result in results], ensure_ascii=False, indent=2))
-    return
+    # print(
+    #     json.dumps(
+    #         [result.model_dump(mode="json") for result in results.task_results],
+    #         ensure_ascii=False,
+    #         indent=2,
+    #     )
+    # )
+    logging.warning('done')
 
 
 if __name__ == "__main__":

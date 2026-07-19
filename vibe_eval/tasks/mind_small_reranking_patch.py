@@ -17,13 +17,17 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import torch
 from datasets import Dataset
+from mteb.tasks.reranking.eng.mind_small_reranking import (
+    MindSmallReranking as _UpstreamMindSmallReranking,
+)
 from mteb.types import PromptType
-
 
 logger = logging.getLogger(__name__)
 
-MIND_SMALL_RERANKING = "MindSmallReranking"
-MIND_SMALL_REVISION = "227478e3235572039f4f7661840e059f31ef6eb1"
+_MIND_SMALL_METADATA = _UpstreamMindSmallReranking.metadata
+MIND_SMALL_TASK_NAME = _MIND_SMALL_METADATA.name
+MIND_SMALL_DATASET_PATH = _MIND_SMALL_METADATA.dataset["path"]
+MIND_SMALL_REVISION = _MIND_SMALL_METADATA.dataset["revision"]
 
 _mind_patch_installed = False
 _original_mind_loader_load: Any | None = None
@@ -39,7 +43,7 @@ def _load_with_mind_candidates(loader: Any, num_proc: int | None = None) -> Any:
     assert _original_mind_loader_load is not None
     split_data = _original_mind_loader_load(loader, num_proc=num_proc)
     if (
-        loader.hf_repo == "mteb/MindSmallReranking"
+        loader.hf_repo == MIND_SMALL_DATASET_PATH
         and loader.revision == MIND_SMALL_REVISION
         and split_data["top_ranked"] is None
     ):
@@ -50,7 +54,7 @@ def _load_with_mind_candidates(loader: Any, num_proc: int | None = None) -> Any:
             for score in doc_scores.values()
         ):
             raise RuntimeError(
-                "MindSmallReranking candidate recovery requires qrels containing "
+                f"{MIND_SMALL_TASK_NAME} candidate recovery requires qrels containing "
                 "both positive and zero-labelled candidate documents."
             )
         # The qrels mappings already contain the candidate IDs in dataset order.
@@ -58,8 +62,9 @@ def _load_with_mind_candidates(loader: Any, num_proc: int | None = None) -> Any:
         # 97 million IDs or loading the separate 5 GB top_ranked configuration.
         split_data["top_ranked"] = relevant_docs
         logger.info(
-            "Recovered MindSmallReranking candidate sets from qrels because the "
-            "offline dataset config discovery did not expose top_ranked."
+            "Recovered %s candidate sets from qrels because the "
+            "offline dataset config discovery did not expose top_ranked.",
+            MIND_SMALL_TASK_NAME,
         )
     return split_data
 
@@ -118,7 +123,8 @@ def _encode_unique_queries(
         **encode_kwargs,
     )
     logger.info(
-        "MindSmallReranking encoded %d distinct query texts for %d query rows.",
+        "%s encoded %d distinct query texts for %d query rows.",
+        MIND_SMALL_TASK_NAME,
         len(unique_texts),
         len(queries),
     )
@@ -233,7 +239,7 @@ def _search_with_mind_optimization(
 ) -> Any:
     """Intercept only MindSmall search and delegate every other task unchanged."""
     assert _original_search is not None
-    if task_metadata.name != MIND_SMALL_RERANKING:
+    if task_metadata.name != MIND_SMALL_TASK_NAME:
         return _original_search(
             wrapper,
             queries,
@@ -249,12 +255,12 @@ def _search_with_mind_optimization(
         # Running this reranking task against the full corpus changes both cost
         # and semantics, so fail explicitly instead of accepting MTEB's fallback.
         raise RuntimeError(
-            "MindSmallReranking requires candidate documents; refusing to run it "
+            f"{MIND_SMALL_TASK_NAME} requires candidate documents; refusing to run it "
             "as full-corpus retrieval."
         )
     if wrapper.index_backend is not None:
         raise RuntimeError(
-            "The MindSmallReranking optimization currently requires the default "
+            f"The {MIND_SMALL_TASK_NAME} optimization currently requires the default "
             "encoder search path without an external index backend."
         )
     if wrapper.task_corpus is None:
@@ -324,7 +330,8 @@ def install_mind_small_reranking_patch() -> None:
     search_wrappers.SearchEncoderWrapper.search = _search_with_mind_optimization
     _mind_patch_installed = True
     logger.info(
-        "Installed repository-local MindSmallReranking patch for MTEB %s.",
+        "Installed repository-local %s patch for MTEB %s.",
+        MIND_SMALL_TASK_NAME,
         version,
     )
 
@@ -345,30 +352,31 @@ def patch_mind_small_reranking_tasks(
     *,
     environ: Mapping[str, str] | None = None,
 ) -> list[Any]:
-    """Select the implementation, install legacy hooks, and place MindSmall last."""
-    mode = resolve_mind_small_mode(environ)
+    """Select the MindSmall implementation and install legacy hooks if needed."""
     patched_tasks = list(tasks)
+    if not any(
+        task.metadata.name == MIND_SMALL_TASK_NAME for task in patched_tasks
+    ):
+        return patched_tasks
+    mode = resolve_mind_small_mode(environ)
     if mode == MIND_SMALL_COMPACT_MODE:
         from vibe_eval.tasks.mind_small_reranking import MindSmallReranking
 
         # Keep the public task name and upstream metadata while replacing only the
         # implementation object selected by MTEB.
-        patched_tasks = [
-            MindSmallReranking()
-            if task.metadata.name == MIND_SMALL_RERANKING
-            else task
-            for task in patched_tasks
-        ]
-    elif any(
-        task.metadata.name == MIND_SMALL_RERANKING for task in patched_tasks
-    ):
+        replacements = []
+        for task in patched_tasks:
+            if task.metadata.name != MIND_SMALL_TASK_NAME:
+                replacements.append(task)
+                continue
+            replacement = MindSmallReranking(seed=task.seed)
+            replacement.hf_subsets = list(task.hf_subsets)
+            replacement._eval_splits = getattr(task, "_eval_splits", None)
+            replacements.append(replacement)
+        patched_tasks = replacements
+    else:
         # Legacy hooks are global, so install them only when the selected task set
         # actually contains MindSmall.
         install_mind_small_reranking_patch()
 
-    # Preserve relative order for all other tasks and defer this unusually large
-    # task until the end of the evaluation.
-    return sorted(
-        patched_tasks,
-        key=lambda task: task.metadata.name == MIND_SMALL_RERANKING,
-    )
+    return patched_tasks
