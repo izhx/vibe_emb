@@ -130,6 +130,16 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--max_length", type=int, default=2048)
+    parser.add_argument(
+        "--max_batch_tokens",
+        type=int,
+        default=None,
+        help=(
+            "Optional maximum padded tokens in one model forward pass. Disabled "
+            "by default; oversized batches are split internally when it is set."
+            "8*32768=262_144 for 8b, 32*32768=1_048_576 for 0.5b-2b."
+        ),
+    )
     parser.add_argument("--device", default='cuda')
     parser.add_argument(
         "--dtype",
@@ -317,6 +327,7 @@ def main() -> None:
         device=args.device,
         dtype=args.dtype,
         max_length=args.max_length,
+        max_batch_tokens=args.max_batch_tokens,
         query_instruction=args.query_instruction,
         query_instruction_format=args.query_instruction_format,
         use_task_prompts=not args.no_task_prompts,

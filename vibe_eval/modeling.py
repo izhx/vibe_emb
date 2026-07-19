@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,9 @@ from mteb.types import BatchedInput, PromptType
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import AutoModel, AutoTokenizer
+
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_QUERY_INSTRUCTION = (
@@ -35,6 +39,7 @@ class QwenDecoderOnlyEmbedder(AbsEncoder):
         device: str | None = None,
         dtype: str = "auto",
         max_length: int = 512,
+        max_batch_tokens: int | None = None,
         query_instruction: str = DEFAULT_QUERY_INSTRUCTION,
         query_instruction_format: str = DEFAULT_QUERY_INSTRUCTION_FORMAT,
         use_task_prompts: bool = True,
@@ -51,6 +56,10 @@ class QwenDecoderOnlyEmbedder(AbsEncoder):
         self.model_name_or_path = model_path
         self.adapter_name_or_path = adapter_path
         self.max_length = max_length
+        if max_batch_tokens is not None and max_batch_tokens <= 0:
+            raise ValueError("max_batch_tokens must be positive or None.")
+        self.max_batch_tokens = max_batch_tokens
+        self._reported_token_split = False
         self.query_instruction = query_instruction
         self.use_task_prompts = use_task_prompts
         self.instruction_template = query_instruction_format
@@ -251,21 +260,105 @@ class QwenDecoderOnlyEmbedder(AbsEncoder):
                     max_length=self.max_length,
                     return_tensors="pt",
                 )
-                features = {k: v.to(self.device) for k, v in features.items()}
-                outputs = self.model(**features, return_dict=True)
-                reps = self._last_token_pool(
-                    outputs.last_hidden_state,
-                    features["attention_mask"],
-                )
-                if self.normalize_embeddings:
-                    reps = F.normalize(reps, dim=-1)
-                embeddings.append(reps.cpu())
+                input_ids = features["input_ids"]
+                batch_size = input_ids.size(0)
+                sequence_length = input_ids.size(1)
+                token_num = batch_size * sequence_length
+                max_batch_tokens = self.max_batch_tokens
+                if max_batch_tokens is None or token_num <= max_batch_tokens:
+                    batch_embeddings = self._encode(features)
+                else:
+                    batch_embeddings = self._encode_split_batch(
+                        features,
+                        max_batch_tokens,
+                    )
+
+                embeddings.append(batch_embeddings)
                 progress.update(len(batch_texts))
         progress.close()
 
         if not embeddings:
             return np.empty((0, self.mteb_model_meta.embed_dim or 0), dtype=np.float32)
         return torch.cat(embeddings, dim=0).float().numpy()
+
+    def _encode(self, features: dict[str, torch.Tensor]) -> torch.Tensor:
+        features = {key: value.to(self.device) for key, value in features.items()}
+        # Embedding evaluation consumes only the current hidden states. Decoder KV
+        # cache otherwise retains K/V tensors for every layer and grows linearly
+        # with batch size and sequence length.
+        outputs = self.model(
+            **features,
+            use_cache=False,
+            return_dict=True,
+        )
+        reps = self._last_token_pool(
+            outputs.last_hidden_state,
+            features["attention_mask"],
+        )
+        if self.normalize_embeddings:
+            reps = F.normalize(reps, dim=-1)
+        return reps.cpu()
+
+    def _encode_split_batch(
+        self,
+        features: dict[str, torch.Tensor],
+        max_batch_tokens: int,
+    ) -> torch.Tensor:
+        input_ids = features["input_ids"]
+        batch_size = input_ids.size(0)
+        sequence_length = input_ids.size(1)
+        token_num = batch_size * sequence_length
+        micro_batch_size = max(max_batch_tokens // sequence_length, 1)
+        num_forwards = (
+            batch_size + micro_batch_size - 1
+        ) // micro_batch_size
+        if not self._reported_token_split:
+            logger.warning(
+                "Splitting an MTEB batch of %d texts (%d padded tokens) "
+                "into %d forwards capped by max_batch_tokens=%d.",
+                batch_size,
+                token_num,
+                num_forwards,
+                max_batch_tokens,
+            )
+            self._reported_token_split = True
+
+        split_embeddings: list[torch.Tensor] = []
+        for start in range(0, batch_size, micro_batch_size):
+            end = start + micro_batch_size
+            micro_features = {
+                key: value[start:end]
+                for key, value in features.items()
+            }
+            micro_features = self._trim_batch_padding(micro_features)
+            split_embeddings.append(self._encode(micro_features))
+        return torch.cat(split_embeddings, dim=0)
+
+    @staticmethod
+    def _trim_batch_padding(
+        features: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        attention_mask = features["attention_mask"]
+        active_columns = attention_mask.bool().any(dim=0).nonzero(as_tuple=False)
+        if active_columns.numel() == 0:
+            return features
+
+        start = active_columns[0].item()
+        end = active_columns[-1].item() + 1
+        if start == 0 and end == attention_mask.size(1):
+            return features
+
+        batch_size, sequence_length = attention_mask.shape
+        return {
+            key: value[:, start:end]
+            if (
+                value.ndim >= 2
+                and value.size(0) == batch_size
+                and value.size(1) == sequence_length
+            )
+            else value
+            for key, value in features.items()
+        }
 
     def similarity(self, embeddings1: Any, embeddings2: Any) -> torch.Tensor:
         return torch.as_tensor(embeddings1) @ torch.as_tensor(embeddings2).T
