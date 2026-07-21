@@ -309,13 +309,15 @@ def main() -> None:
     import mteb
     from vibe_eval.modeling import QwenDecoderOnlyEmbedder
     from vibe_eval.mteb_patches import (
+        create_result_cache,
+        install_e2e_evaluation_time_patch,
         install_query_dataloader_patch,
         install_retrieval_qrels_offline_patch,
         install_reranking_top_ranked_patch,
-        create_result_cache,
     )
 
     configure_mteb_verbosity(args.verbosity)
+    install_e2e_evaluation_time_patch()
     install_query_dataloader_patch()
     install_retrieval_qrels_offline_patch()
 
@@ -342,7 +344,7 @@ def main() -> None:
         cache=result_cache,
         co2_tracker=False,
         overwrite_strategy="always" if args.overwrite_results else "only-missing",
-        encode_kwargs={"batch_size": args.batch_size},
+        encode_kwargs={"batch_size": args.batch_size, "show_progress_bar": True},
     )
     # print(
     #     json.dumps(

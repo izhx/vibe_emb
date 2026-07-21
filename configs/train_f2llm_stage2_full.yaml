@@ -23,10 +23,9 @@ data:
   append_eos_token: false
   same_dataset_within_batch: true
   arrow_open_mode: lazy
-  arrow_max_open_units: 4
-  arrow_prefetch_units: 0
+  arrow_max_open_units: 32
   arrow_verify_mode: lazy
-  unit_block_batches: 8
+  unit_block_batches: 1
   task_defaults:
     retrieval:
       train_group_size: 8
@@ -39,7 +38,7 @@ data:
       no_in_batch_neg: true
 
 training:
-  output_dir: results/f2llm-s2-lora64
+  output_dir: results/f2llm-s2-lora64-f2llm-loss
   # overwrite_output_dir: true
   do_train: true
   num_train_epochs: 2
@@ -54,11 +53,14 @@ training:
   save_strategy: steps
   save_steps: 500
   dataloader_drop_last: true
-  dataloader_num_workers: 0
+  dataloader_num_workers: 1
+  dataloader_prefetch_factor: 4
+  dataloader_persistent_workers: false
   dataloader_pin_memory: true
   ddp_find_unused_parameters: false
   remove_unused_columns: false
   report_to: tensorboard
   temperature: 0.05
+  retrieval_loss_mode: f2llm
   negatives_cross_device: true
   sub_batch_size: 0

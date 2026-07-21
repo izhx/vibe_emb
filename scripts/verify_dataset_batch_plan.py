@@ -16,6 +16,8 @@ if str(ROOT_DIR) not in sys.path:
 
 from vibe_emb.config import load_yaml_config, parse_sections
 from vibe_emb.data import MultiDatasetBatchDataset
+from vibe_emb.train import _build_training_args
+from vibe_emb.trainer import create_train_dataloader
 
 
 def _init_dist_if_needed() -> tuple[int, int]:
@@ -37,7 +39,17 @@ def _gather_object(obj: Dict[str, Any], world_size: int) -> List[Dict[str, Any]]
     return [item for item in gathered if item is not None]
 
 
-def _rank_step_snapshot(dataset: MultiDatasetBatchDataset, step: int) -> Dict[str, Any]:
+def _unwrap_single(features):  # noqa: ANN001
+    if len(features) != 1:
+        raise ValueError(f"Expected one dataset-prebatched item, got {len(features)}")
+    return features[0]
+
+
+def _rank_step_snapshot(
+    dataset: MultiDatasetBatchDataset,
+    step: int,
+    batch: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
     dataset_idx, global_indices = dataset.batch_plan[step]
     loaded = dataset.datasets[dataset_idx]
     per_rank = len(global_indices) // dataset.world_size
@@ -46,7 +58,10 @@ def _rank_step_snapshot(dataset: MultiDatasetBatchDataset, step: int) -> Dict[st
 
     # Fetch the actual item as Trainer would. This confirms that __getitem__
     # uses the same shard boundaries as the plan metadata inspected above.
-    batch = dataset[step]
+    batch = dataset[step] if batch is None else batch
+    metadata = batch.get("_batch_metadata") or {}
+    if int(metadata.get("batch_idx", step)) != step:
+        raise AssertionError(f"DataLoader returned batch {metadata.get('batch_idx')} at expected step {step}")
     return {
         "rank": dataset.process_index,
         "step": step,
@@ -98,6 +113,11 @@ def main() -> None:
     parser.add_argument("--config", required=True)
     parser.add_argument("--steps", type=int, default=8)
     parser.add_argument("--epoch", type=int, default=0)
+    parser.add_argument(
+        "--through-dataloader",
+        action="store_true",
+        help="Fetch batches through the production ordered DataLoader worker path.",
+    )
     args = parser.parse_args()
 
     rank, world_size = _init_dist_if_needed()
@@ -115,21 +135,40 @@ def main() -> None:
     if args.epoch != 0:
         dataset.refresh_epoch(args.epoch)
 
-    inspected = min(args.steps, len(dataset))
-    for step in range(inspected):
-        gathered = _gather_object(_rank_step_snapshot(dataset, step), world_size)
+    try:
+        inspected = min(args.steps, len(dataset))
+        if args.through_dataloader:
+            training_args = _build_training_args(training_raw)
+            loader = create_train_dataloader(dataset, _unwrap_single, training_args)
+            iterator = iter(loader)
+            try:
+                for step in range(inspected):
+                    gathered = _gather_object(_rank_step_snapshot(dataset, step, next(iterator)), world_size)
+                    if rank == 0:
+                        _verify_step(gathered)
+            finally:
+                # The verifier deliberately supports inspecting fewer than all
+                # batches. Explicitly close such truncated test iterators.
+                shutdown = getattr(iterator, "_shutdown_workers", None)
+                if shutdown is not None:
+                    shutdown()
+        else:
+            for step in range(inspected):
+                gathered = _gather_object(_rank_step_snapshot(dataset, step), world_size)
+                if rank == 0:
+                    _verify_step(gathered)
+
         if rank == 0:
-            _verify_step(gathered)
-
-    if rank == 0:
-        print(
-            f"OK: verified {inspected} distributed dataset steps from {args.config} "
-            f"with world_size={world_size}, epoch={args.epoch}."
-        )
-        print(dataset.format_consumption_stats())
-
-    if dist.is_available() and dist.is_initialized():
-        dist.destroy_process_group()
+            print(
+                f"OK: verified {inspected} distributed "
+                f"{'dataloader' if args.through_dataloader else 'dataset'} steps from {args.config} "
+                f"with world_size={world_size}, epoch={args.epoch}."
+            )
+            print(dataset.format_consumption_stats())
+    finally:
+        dataset.close()
+        if dist.is_available() and dist.is_initialized():
+            dist.destroy_process_group()
 
 
 if __name__ == "__main__":

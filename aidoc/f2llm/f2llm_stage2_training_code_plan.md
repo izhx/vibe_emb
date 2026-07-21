@@ -1,6 +1,6 @@
 # F2LLM-v2 / ML-Embed Second-stage 训练代码修改计划
 
-## 当前实现状态（2026-07-14）
+## 当前实现状态（2026-07-20）
 
 实施顺序的第 1--4 项已有第一版实现：配置支持 Indexed Arrow manifest 和 task
 defaults；record store 使用 manifest-only descriptor、lazy mmap 和有界 unit LRU；
@@ -12,7 +12,40 @@ batch builder 对当前 rank 的 query 索引执行一次批量读取；`unit_bl
 defaults 分别解析为 retrieval `8/false`、clustering `10/true`、classification
 `2/true`（数值依次为 `train_group_size/no_in_batch_neg`）。
 
-第 5 项之后的 loss、MRL、跨卡数值验证和正式训练 smoke 尚未实现。
+F2LLM retrieval loss 和跨卡数值验证已于 2026-07-20 完成；MRL 仍未实现。完整 stage-2
+长训和新 loss 的 MTEB 对比尚未执行。
+
+### F2LLM retrieval loss 实施与 smoke（2026-07-20）
+
+冻结语义和逐文件实施计划见：
+
+- [retrieval loss spec](./spec/f2llm_stage2_retrieval_loss_spec.md)
+- [retrieval loss implementation plan](./plan/f2llm_stage2_retrieval_loss_implementation_plan.md)
+
+当前实现新增 `training.retrieval_loss_mode: legacy | f2llm`，默认 `legacy`。F2LLM retrieval
+计算 query-local hard CE 加 positive-only in-batch CE；两个 CE 使用独立 normalization，在同一
+helper 中合计后只 backward 一次。多卡只 gather positives，不 gather queries 或完整 passage
+groups。classification/clustering 继续由 `no_in_batch_neg=true` 使用原有 own-group CE。
+
+正式配置 `configs/train_f2llm_stage2_full.yaml` 已显式启用 `f2llm`，并改用独立输出目录
+`results/f2llm-s2-lora64-f2llm-loss`，不会自动续接 legacy checkpoint。真实 smoke 使用新增的
+`configs/train_f2llm_stage2_loss_smoke.yaml` 和
+`scripts/f2llm/verify_retrieval_loss_smoke.py`。
+
+验证结果：
+
+- loss/config/Gloo distributed 与既有 Arrow/prefetch 联合回归：`41 passed in 394.05s`；
+- 单卡 Qwen3-0.6B BF16：`hard=2.1378059`、`in_batch=0.2648869`、
+  `total=2.4026928`，392 个 LoRA 梯度 tensor 全部有限；
+- 两卡 Qwen3-0.6B BF16：每 rank 的 score shape 为 `[2,4]`，每 rank 只 gather 一次
+  `[2,1024]` positive tensor；loss 分项与梯度全部有限；
+- Trainer 单卡 44 steps 和两卡 31 steps 均实际经过 retrieval batch、保存最终 adapter；
+- 两个 adapter 均通过 `maybe_apply_peft()` 重载并识别 392 个可训练 LoRA tensor。
+
+smoke 输出位于 `/tmp/vibe_emb_f2llm_loss_smoke_single_20260720` 和
+`/tmp/vibe_emb_f2llm_loss_smoke_ddp2_20260720`，仅作为临时验收产物。正式长训是否从 base/stage-1
+开始或以 checkpoint-12000 adapter warm start，及是否调整 learning rate，需要在独立实验中
+人工决定；不得切换 loss 后直接 resume 旧 optimizer/scheduler。
 
 ### 端到端单卡 smoke 结果（2026-07-14）
 
@@ -125,7 +158,9 @@ position 和 record index 确定，不依赖进程内可变 RNG。Trainer 默认
 - seed、world size、manifest 内容及 unit 顺序、batch size、sample size/factor、task
   defaults、`unit_block_batches` 和 tokenizer/model 配置不变；
 - `max_steps`/scheduler 总步数应在首次启动时就确定，不能先按较短 schedule 跑完再增加；
-- 保持 `ignore_data_skip=false`、`dataloader_num_workers=0`；
+- 保持 `ignore_data_skip=false`；`dataloader_num_workers=0` 仍是默认路径，若启用已验证的
+  non-persistent DataLoader prefetch，则 worker 0/1 必须通过相同 batch fingerprint 和
+  resume offset 验证；
 - NumPy/PyTorch/Transformers/PEFT 版本和确定性相关设置尽量不变。
 
 当前仍有以下风险：checkpoint 未内嵌 manifest/config fingerprint，修改数据或配置后恢复
@@ -653,6 +688,14 @@ training:
 - tuple-local patch 重建后只改变目标 sample；共享 `doc_id` 的其他引用保持原文。
 
 ## 12. 实施顺序
+
+PyTorch DataLoader batch prefetch 的独立需求、约束和实施记录见：
+
+- `aidoc/f2llm/spec/f2llm_stage2_dataloader_prefetch_spec.md`；
+- `aidoc/f2llm/plan/f2llm_stage2_dataloader_prefetch_implementation_plan.md`。
+
+该能力与本节原计划中的 Arrow unit prefetch/node-local cache 不同，不改变 manifest 或
+record-store 格式。
 
 1. 扩展配置 dataclass 和 manifest-only descriptor 解析，但保持旧测试通过。
 2. 引入 record store 抽象、lazy `ArrowStorePool`、有界 LRU 和显式清理。

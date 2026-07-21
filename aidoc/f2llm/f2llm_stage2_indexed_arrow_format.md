@@ -23,8 +23,10 @@
 - classification `dala`：6,508 query / 2 corpus。
 
 三者已通过 full fingerprint、连续 query/doc ID、引用范围、sample ID 唯一性和
-inspect round-trip 校验。尚未构建完整 17.7M profile；patch、export、diff、节点本地
-cache 和异步 prefetch 仍属于后续工作。
+inspect round-trip 校验。完整 profile 当前包含 17,733,362 条有效 query；patch、export、
+diff、节点本地 cache 和 Arrow unit 级异步 prefetch 仍属于后续工作。训练侧已经另外支持 PyTorch
+DataLoader 的完整 batch prefetch；它不会提前复制完整 unit，也不使用
+`arrow_prefetch_units`。
 
 ## 1. 目标与边界
 
@@ -301,7 +303,8 @@ batch plan 只能依赖 manifest 中的 unit 顺序、query count、task type、
 - 可预取下一个 unit，但预取也计入 LRU 上限；
 - eviction 必须关闭 Arrow reader、memory map 和文件句柄；
 - `get_records()` 返回前将本 batch 需要的字符串转换为普通 Python 对象，不能把引用 mmap buffer 的 Arrow array 暴露到 store 外；
-- DataLoader worker 默认保持 0，避免每个 worker 复制 store cache 和 mmap；
+- DataLoader worker 的框架默认保持 0；显式启用 batch prefetch 时，每个 worker 拥有独立的
+  store cache 和 mmap，因此资源上界按 `workers * arrow_max_open_units` 计算；
 - trainer 正常结束和异常清理路径都必须调用 `close()`。
 
 若 120 个 unit 的两个文件被所有 8 个 rank eager mmap，则约为 240 mappings/rank、1920 mappings/node；这是节点总量，不是单进程 `vm.max_map_count`。通常不会立即耗尽物理内存，但会增加文件描述符、共享存储 metadata 请求、页表和虚拟地址空间，并放大随机页缓存抖动，因此不能作为默认实现。

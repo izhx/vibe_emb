@@ -33,7 +33,9 @@ Runtime target:
 
 Each Trainer dataset item is one prebuilt rank-local contrastive batch. `per_device_train_batch_size` must be `1`, and `gradient_accumulation_steps` must be `1`.
 
-`dataloader_num_workers` must be `0`. Consumption counters are updated inside `__getitem__`; worker-process dataset copies would make Trainer-side stats misleading.
+`dataloader_num_workers=0` remains the framework default. A positive worker count enables ordered PyTorch batch prefetch; `dataloader_prefetch_factor` is resolved per worker and `dataloader_persistent_workers` must remain `false`. Consumption counters are acknowledged in the main process at `EmbeddingTrainer.training_step`, so batches prepared ahead by workers are not counted until they actually enter training.
+
+Worker processes use the `spawn` context because they are created after tokenizer, model, and CUDA initialization. Each worker owns an independent Arrow LRU, so the per-rank open-unit upper bound is `dataloader_num_workers * arrow_max_open_units`. Production worker counts must therefore be validated against shared-filesystem, CPU, RSS, and file-descriptor pressure.
 
 ### Trainer And Accelerate Boundary
 
@@ -247,6 +249,8 @@ Observed result before the later removal of explicit `loss * world_size`:
 - PEFT saving wrote adapter files at the final output and `checkpoint-2`, with no merged checkpoint by default.
 
 Trainer's printed `train_samples_per_second` is not meaningful as raw-example throughput in this framework because Trainer sees one prebuilt dataset item per optimizer step. Compute real query throughput manually as `dataset.batch_size * world_size / step_time`.
+
+Training writes per-rank DataLoader telemetry under the output directory as `dataloader_metrics_rank_<rank>.jsonl` plus a summary JSON. The wait metric measures the main process obtaining the next ordered DataLoader batch; it includes queue and Python scheduling overhead and is not a pure storage-I/O measurement.
 
 Useful overrides:
 

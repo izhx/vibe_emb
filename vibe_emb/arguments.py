@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
 InstructionConfig = Optional[Union[str, List[str]]]
+RETRIEVAL_LOSS_MODES = frozenset({"legacy", "f2llm"})
 
 
 @dataclass
@@ -99,3 +100,12 @@ class EmbedTrainingExtras:
     negatives_cross_device: bool = True
     sub_batch_size: int = 0
     kd_loss_type: str = "kl_div"
+    retrieval_loss_mode: str = "legacy"
+
+    def __post_init__(self) -> None:
+        if self.retrieval_loss_mode not in RETRIEVAL_LOSS_MODES:
+            allowed = ", ".join(sorted(RETRIEVAL_LOSS_MODES))
+            raise ValueError(
+                f"training.retrieval_loss_mode must be one of {allowed}; "
+                f"got {self.retrieval_loss_mode!r}."
+            )

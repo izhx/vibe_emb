@@ -24,6 +24,17 @@ class EmbeddingOutput(ModelOutput):
     scores: Optional[Tensor] = None
     q_reps: Optional[Tensor] = None
     p_reps: Optional[Tensor] = None
+    hard_loss: Optional[Tensor] = None
+    in_batch_loss: Optional[Tensor] = None
+
+
+@dataclass
+class _ContrastiveLossResult:
+    """Internal loss result with optional F2LLM diagnostic components."""
+    scores: Tensor
+    loss: Tensor
+    hard_loss: Optional[Tensor] = None
+    in_batch_loss: Optional[Tensor] = None
 
 
 def _dtype_from_name(name: Optional[str], bf16: bool = False, fp16: bool = False):
@@ -209,6 +220,80 @@ class EmbeddingModel(nn.Module):
     def distill_loss(teacher_targets: Tensor, student_scores: Tensor) -> Tensor:
         return -torch.mean(torch.sum(F.log_softmax(student_scores, dim=-1) * teacher_targets, dim=-1))
 
+    @staticmethod
+    def _mean_nll_from_logits(logits: Tensor, targets: Tensor) -> Tensor:
+        """Compute mean NLL with an explicit FP32 log-sum-exp reduction."""
+        if logits.ndim != 2:
+            raise ValueError(f"Expected 2-D logits, got shape {tuple(logits.shape)}")
+        if targets.ndim != 1 or targets.size(0) != logits.size(0):
+            raise ValueError(
+                f"Targets must have shape ({logits.size(0)},), got {tuple(targets.shape)}"
+            )
+        loss_logits = logits.float()
+        target_logits = loss_logits.gather(1, targets.unsqueeze(1)).squeeze(1)
+        return (torch.logsumexp(loss_logits, dim=-1) - target_logits).mean()
+
+    @staticmethod
+    def _passage_groups(q_reps: Tensor, p_reps: Tensor) -> Tensor:
+        """Restore the positive-first passage group associated with each query."""
+        if q_reps.ndim != 2 or p_reps.ndim != 2:
+            raise ValueError(
+                f"Query and passage embeddings must be 2-D, got {tuple(q_reps.shape)} and {tuple(p_reps.shape)}"
+            )
+        query_count = q_reps.size(0)
+        if query_count == 0:
+            raise ValueError("Cannot compute contrastive loss for an empty query batch.")
+        if q_reps.size(1) != p_reps.size(1):
+            raise ValueError(
+                f"Query and passage hidden sizes differ: {q_reps.size(1)} != {p_reps.size(1)}"
+            )
+        if p_reps.size(0) % query_count != 0:
+            raise ValueError(
+                f"Passage count {p_reps.size(0)} is not divisible by query count {query_count}."
+            )
+        group_size = p_reps.size(0) // query_count
+        if group_size == 0:
+            raise ValueError("Each query must have at least one passage.")
+        return p_reps.reshape(query_count, group_size, p_reps.size(1))
+
+    def _f2llm_retrieval_loss(
+        self,
+        q_reps: Tensor,
+        p_reps: Tensor,
+        teacher_scores: Optional[Tensor],
+        temperature: float,
+    ) -> _ContrastiveLossResult:
+        """Compute independent hard and positive-only in-batch normalizations."""
+        groups = self._passage_groups(q_reps, p_reps)
+        hard_scores = torch.einsum("bd,bgd->bg", q_reps, groups) / temperature
+        hard_targets = torch.zeros(q_reps.size(0), device=q_reps.device, dtype=torch.long)
+        hard_loss = self._mean_nll_from_logits(hard_scores, hard_targets)
+
+        positive_reps = groups[:, 0, :]
+        if self.negatives_cross_device and self.training:
+            positive_reps = self._dist_gather_tensor(positive_reps)
+            target_offset = self.process_rank * q_reps.size(0)
+        else:
+            target_offset = 0
+        in_batch_scores = self.compute_score(q_reps, positive_reps, temperature)
+        in_batch_targets = torch.arange(
+            q_reps.size(0), device=q_reps.device, dtype=torch.long
+        ) + target_offset
+        in_batch_loss = self._mean_nll_from_logits(in_batch_scores, in_batch_targets)
+
+        loss = hard_loss + in_batch_loss
+        if teacher_scores is not None:
+            teacher_targets = F.softmax(
+                teacher_scores.to(q_reps.device).view(q_reps.size(0), -1), dim=-1
+            ).detach()
+            loss = loss + self.distill_loss(teacher_targets, hard_scores)
+        return _ContrastiveLossResult(
+            scores=in_batch_scores,
+            loss=loss,
+            hard_loss=hard_loss,
+            in_batch_loss=in_batch_loss,
+        )
+
     def _contrastive_loss(
         self,
         q_reps: Tensor,
@@ -216,13 +301,18 @@ class EmbeddingModel(nn.Module):
         teacher_scores: Optional[Tensor],
         no_in_batch_neg: bool,
         temperature: float,
-    ) -> tuple[Tensor, Tensor]:
+    ) -> _ContrastiveLossResult:
         """Compute explicit-group or in-batch contrastive loss.
 
         ``p_reps`` is flattened as one fixed-size group per query, with the
         positive at offset zero. Therefore positive targets in a full score
         matrix are ``query_index * group_size``.
         """
+        if not no_in_batch_neg and self.training_extras.retrieval_loss_mode == "f2llm":
+            return self._f2llm_retrieval_loss(
+                q_reps, p_reps, teacher_scores, temperature
+            )
+
         group_size = p_reps.size(0) // q_reps.size(0)
         teacher_targets = None
         if teacher_scores is not None:
@@ -235,10 +325,15 @@ class EmbeddingModel(nn.Module):
             scores = self.compute_score(q_reps, p_reps, temperature)
             local_scores = self._local_scores(q_reps, p_reps, scores)
             targets = torch.zeros(q_reps.size(0), device=q_reps.device, dtype=torch.long)
-            loss = self.cross_entropy(local_scores, targets)
+            hard_loss = self.cross_entropy(local_scores, targets)
+            loss = hard_loss
             if teacher_targets is not None:
                 loss = loss + self.distill_loss(teacher_targets, local_scores)
-            return local_scores, loss
+            return _ContrastiveLossResult(
+                scores=local_scores,
+                loss=loss,
+                hard_loss=hard_loss,
+            )
 
         if self.negatives_cross_device and self.training:
             # All ranks have an identical dataset/group-size plan. Gathered
@@ -253,7 +348,7 @@ class EmbeddingModel(nn.Module):
                 local_scores = self._local_scores(q_for_score, p_for_score, scores)
                 local_scores = local_scores[q_reps.size(0) * self.process_rank : q_reps.size(0) * (self.process_rank + 1)]
                 loss = loss + self.distill_loss(teacher_targets, local_scores)
-            return scores, loss
+            return _ContrastiveLossResult(scores=scores, loss=loss)
 
         scores = self.compute_score(q_reps, p_reps, temperature)
         targets = torch.arange(q_reps.size(0), device=q_reps.device, dtype=torch.long) * group_size
@@ -261,7 +356,7 @@ class EmbeddingModel(nn.Module):
         if teacher_targets is not None:
             local_scores = self._local_scores(q_reps, p_reps, scores)
             loss = loss + self.distill_loss(teacher_targets, local_scores)
-        return scores, loss
+        return _ContrastiveLossResult(scores=scores, loss=loss)
 
     def forward(
         self,
@@ -282,8 +377,17 @@ class EmbeddingModel(nn.Module):
         temperature = float(loss_kwargs.get("temperature", self.training_extras.temperature))
         q_reps = self.encode(queries, model_kwargs=model_kwargs, sub_batch_size=sub_batch_size)
         p_reps = self.encode(passages, model_kwargs=model_kwargs, sub_batch_size=sub_batch_size)
-        scores, loss = self._contrastive_loss(q_reps, p_reps, teacher_scores, no_in_batch_neg, temperature)
-        return EmbeddingOutput(loss=loss, scores=scores, q_reps=q_reps, p_reps=p_reps)
+        result = self._contrastive_loss(
+            q_reps, p_reps, teacher_scores, no_in_batch_neg, temperature
+        )
+        return EmbeddingOutput(
+            loss=result.loss,
+            scores=result.scores,
+            q_reps=q_reps,
+            p_reps=p_reps,
+            hard_loss=result.hard_loss,
+            in_batch_loss=result.in_batch_loss,
+        )
 
     def save(self, output_dir: str) -> None:
         if not self.model_args.peft_config and not self.model_args.peft_adapter_name_or_path:

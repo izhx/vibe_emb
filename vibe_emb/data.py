@@ -7,7 +7,7 @@ import math
 import os
 import random
 from dataclasses import dataclass
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Union
+from typing import Any, Dict, Iterator, List, Mapping, Optional, Sequence, Union
 
 import numpy as np
 import torch
@@ -277,6 +277,8 @@ class MultiDatasetBatchDataset(Dataset):
             np.empty((0, 2), dtype=np.uint32), {}, {}
         )
         self.stats: Dict[str, _DatasetStats] = {}
+        self.total_consumed_local_batches = 0
+        self.total_consumed_local_instances = 0
         self.refresh_epoch(0)
 
     def _sample_epoch_indices(self, gen: np.random.Generator, loaded: _LoadedDataset) -> np.ndarray:
@@ -442,19 +444,13 @@ class MultiDatasetBatchDataset(Dataset):
         # ranks still execute the same dataset_key at the same training step.
         local_indices = global_indices[start : start + per_rank]
         local_positions = range(start, start + per_rank)
-        stat = self.stats[loaded.key]
-        # consumed is intentionally counted in __getitem__: it reflects what
-        # Trainer actually asked this rank to train on, which can differ from
-        # planned when max_steps stops in the middle of an epoch.
-        stat.consumed_local_batches += 1
-        stat.consumed_local_instances += len(local_indices)
         store = loaded.store
         if loaded.arrow_unit_id is not None:
             assert self.arrow_store_pool is not None
             store = self.arrow_store_pool.get(loaded.arrow_unit_id)
         assert store is not None
         fetched = store.get_records([int(record_idx) for record_idx in local_indices])
-        return self._build_batch(
+        batch = self._build_batch(
             loaded,
             [
                 (record, int(record_idx), int(global_position))
@@ -463,6 +459,42 @@ class MultiDatasetBatchDataset(Dataset):
             batch_idx,
             self.batch_plan.instruction_offset(batch_idx),
         )
+        # __getitem__ may run ahead in a DataLoader worker. Keep it free of
+        # consumed-counter side effects and let the main training process
+        # acknowledge this metadata only when the batch enters training_step.
+        batch["_batch_metadata"] = {
+            "dataset_key": loaded.key,
+            "epoch": self.epoch,
+            "batch_idx": batch_idx,
+            "local_instances": len(local_indices),
+        }
+        return batch
+
+    def record_consumed(self, metadata: Mapping[str, Any]) -> None:
+        """Acknowledge one batch that actually entered the main training loop."""
+        dataset_key = str(metadata.get("dataset_key", ""))
+        if dataset_key not in self.stats:
+            raise ValueError(f"Unknown consumed dataset key: {dataset_key!r}")
+        batch_epoch = int(metadata.get("epoch", -1))
+        if batch_epoch != self.epoch:
+            raise ValueError(
+                f"Stale batch metadata for {dataset_key}: batch epoch={batch_epoch}, current epoch={self.epoch}. "
+                "Persistent DataLoader workers are not supported."
+            )
+        local_instances = int(metadata.get("local_instances", 0))
+        if local_instances <= 0:
+            raise ValueError(f"Consumed local_instances must be positive, got {local_instances}")
+        stat = self.stats[dataset_key]
+        stat.consumed_local_batches += 1
+        stat.consumed_local_instances += local_instances
+        self.total_consumed_local_batches += 1
+        self.total_consumed_local_instances += local_instances
+
+    def consumption_totals(self) -> Dict[str, int]:
+        return {
+            "consumed_local_batches": self.total_consumed_local_batches,
+            "consumed_local_instances": self.total_consumed_local_instances,
+        }
 
     def format_consumption_stats(self) -> str:
         parts = []
@@ -479,16 +511,15 @@ class MultiDatasetBatchDataset(Dataset):
         return " | ".join(parts)
 
     def log_consumption_stats(self, prefix: str = "consumed") -> None:
-        pass
-        # logger.info(
-        #     "Dataset %s stats for epoch %s, rank %s/%s. "
-        #     "planned_* is global-plan scope; consumed_* is local to this rank: %s",
-        #     prefix,
-        #     self.epoch,
-        #     self.process_index,
-        #     self.world_size,
-        #     self.format_consumption_stats(),
-        # )
+        logger.info(
+            "Dataset %s stats for epoch %s, rank %s/%s. "
+            "planned_* is global-plan scope; consumed_* is local to this rank: %s",
+            prefix,
+            self.epoch,
+            self.process_index,
+            self.world_size,
+            self.format_consumption_stats(),
+        )
 
     def _build_batch(
         self,

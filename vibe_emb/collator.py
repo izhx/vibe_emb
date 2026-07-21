@@ -67,4 +67,7 @@ class EmbeddingCollator:
             "model_kwargs": feature.get("model_kwargs") or {},
             "sub_batch_size": feature.get("sub_batch_size", 0),
             "train_group_size": feature.get("train_group_size"),
+            # Private main-process accounting metadata. EmbeddingTrainer removes
+            # it before model.forward(), so it is never part of the model API.
+            "_batch_metadata": dict(feature["_batch_metadata"]),
         }

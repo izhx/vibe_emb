@@ -88,6 +88,7 @@ def _build_training_args(training_raw: Dict[str, Any]) -> TrainingArguments:
     training_raw.setdefault("per_device_train_batch_size", 1)
     training_raw.setdefault("gradient_accumulation_steps", 1)
     training_raw.setdefault("dataloader_num_workers", 0)
+    training_raw.setdefault("dataloader_persistent_workers", False)
     training_raw.setdefault("remove_unused_columns", False)
     training_raw.setdefault("report_to", "none")
     training_raw.setdefault("disable_tqdm", True)
@@ -95,14 +96,49 @@ def _build_training_args(training_raw: Dict[str, Any]) -> TrainingArguments:
         raise ValueError("gradient_accumulation_steps must be 1 for contrastive embedding training.")
     if training_raw["per_device_train_batch_size"] != 1:
         raise ValueError("per_device_train_batch_size must be 1 because dataset items are pre-batched.")
-    if training_raw["dataloader_num_workers"] != 0:
+    # Validate once at the configured training entrypoint, before
+    # TrainingArguments initializes devices or any DataLoader is created.
+    num_workers = training_raw["dataloader_num_workers"]
+    factor = training_raw.get("dataloader_prefetch_factor")
+    persistent = training_raw["dataloader_persistent_workers"]
+    pin_memory = training_raw.get("dataloader_pin_memory", True)
+    if isinstance(num_workers, bool) or not isinstance(num_workers, int) or num_workers < 0:
+        raise ValueError("training.dataloader_num_workers must be a non-negative integer.")
+    if factor is not None and (isinstance(factor, bool) or not isinstance(factor, int)):
+        raise ValueError("training.dataloader_prefetch_factor must be null or a positive integer.")
+    if not isinstance(persistent, bool):
+        raise ValueError("training.dataloader_persistent_workers must be a boolean.")
+    if not isinstance(pin_memory, bool):
+        raise ValueError("training.dataloader_pin_memory must be a boolean.")
+    if persistent:
         raise ValueError(
-            "dataloader_num_workers must be 0. Dataset consumption stats are updated in __getitem__, "
-            "and worker-process dataset copies would make Trainer logs misleading."
+            "training.dataloader_persistent_workers=true is not supported because epoch batch plans "
+            "are refreshed in the main-process dataset."
         )
+    if num_workers == 0 and factor is not None:
+        raise ValueError(
+            "training.dataloader_prefetch_factor must be null when dataloader_num_workers=0."
+        )
+    if num_workers > 0 and factor is not None and factor <= 0:
+        raise ValueError("training.dataloader_prefetch_factor must be a positive integer.")
+    if num_workers > 0 and factor is None:
+        training_raw["dataloader_prefetch_factor"] = 2
     args = TrainingArguments(**training_raw)
     setattr(args, "vibe_overwrite_output_dir", overwrite_output_dir)
     return args
+
+
+def _resolved_training_config(training_raw: Dict[str, Any], args: TrainingArguments) -> Dict[str, Any]:
+    resolved = dict(training_raw)
+    resolved.update(
+        {
+            "dataloader_num_workers": args.dataloader_num_workers,
+            "dataloader_prefetch_factor": args.dataloader_prefetch_factor,
+            "dataloader_persistent_workers": args.dataloader_persistent_workers,
+            "dataloader_pin_memory": args.dataloader_pin_memory,
+        }
+    )
+    return resolved
 
 
 class EmbeddingTrainRunner:
@@ -122,7 +158,7 @@ class EmbeddingTrainRunner:
                 {
                     "model": to_plain_dict(self.model_args),
                     "data": to_plain_dict(self.data_args),
-                    "training": training_raw,
+                    "training": _resolved_training_config(training_raw, self.training_args),
                     "training_extras": to_plain_dict(self.training_extras),
                 },
             )
@@ -199,7 +235,8 @@ class EmbeddingTrainRunner:
             processing_class=self.tokenizer,
         )
         trainer.add_callback(DatasetRefreshCallback(self.train_dataset))
-        trainer.add_callback(DatasetStatsCallback(self.train_dataset))
+        self.dataset_stats_callback = DatasetStatsCallback(self.train_dataset, trainer)
+        trainer.add_callback(self.dataset_stats_callback)
         trainer.add_callback(TrainingProgressCallback())
         return trainer
 
@@ -224,6 +261,10 @@ class EmbeddingTrainRunner:
             self.trainer.save_metrics("train", metrics)
             self.trainer.save_state()
         finally:
+            # on_train_end normally writes these artifacts. Repeat finalize in
+            # the runner's finally path so an exception still preserves the
+            # completed wait/consumption observations.
+            self.dataset_stats_callback.finalize(self.training_args, self.trainer.state)
             self.train_dataset.close()
             if dist.is_available() and dist.is_initialized():
                 dist.destroy_process_group()
